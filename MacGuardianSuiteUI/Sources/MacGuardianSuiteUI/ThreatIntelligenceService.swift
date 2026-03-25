@@ -199,18 +199,17 @@ class ThreatIntelligenceService: ObservableObject {
     
     func loadThreatMatches() {
         guard FileManager.default.fileExists(atPath: threatMatchesFile.path),
-              let _ = try? Data(contentsOf: threatMatchesFile) else {
+              let data = try? Data(contentsOf: threatMatchesFile),
+              let decoded = try? JSONDecoder().decode([ThreatMatch].self, from: data) else {
             threatMatches = []
             return
         }
-        
-        // Load matches from JSON (simplified - would need proper decoding)
-        // For now, we'll keep matches in memory
+        threatMatches = decoded
     }
-    
+
     func saveThreatMatches() {
-        // Save matches to file (simplified)
-        // In production, would properly encode and save
+        guard let data = try? JSONEncoder().encode(threatMatches) else { return }
+        try? data.write(to: threatMatchesFile)
     }
     
     // MARK: - Statistics

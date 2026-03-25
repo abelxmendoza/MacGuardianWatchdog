@@ -56,17 +56,18 @@ class AlertEngine: ObservableObject {
         return rules
     }
     
-    // Main evaluation method
-    func processEvent(_ event: ThreatEvent) -> Incident? {
+    // Main evaluation method — returns all incidents triggered by this event
+    func processEvent(_ event: ThreatEvent) -> [Incident] {
         let enabledRules = rules.filter { $0.enabled }
-        
+        var triggered: [Incident] = []
+
         for rule in enabledRules {
             guard matches(rule, event: event) else { continue }
             guard !isThrottled(rule) else { continue }
-            
+
             updateThrottle(rule)
-            
-            return Incident(
+
+            triggered.append(Incident(
                 timestamp: event.timestamp,
                 severity: rule.severity,
                 title: rule.name,
@@ -79,9 +80,9 @@ class AlertEngine: ObservableObject {
                     "ruleId": rule.id.uuidString,
                     "ruleName": rule.name
                 ]
-            )
+            ))
         }
-        return nil
+        return triggered
     }
     
     // MARK: - Matching Logic
@@ -89,8 +90,9 @@ class AlertEngine: ObservableObject {
     func matches(_ rule: AlertRule, event: ThreatEvent) -> Bool {
         switch rule.condition {
         case .iocMatch:
-            let severity = event.severity.lowercased()
-            return severity == "critical" || severity == "high" || severity == "medium"
+            // Only fire when the event category is an actual IOC type set by ThreatIntelligenceService
+            let iocCategories: Set<String> = ["ip", "domain", "hash", "url", "file_path"]
+            return iocCategories.contains(event.category?.lowercased() ?? "")
             
         case .networkAnomaly:
             return event.description.lowercased().contains("network") ||

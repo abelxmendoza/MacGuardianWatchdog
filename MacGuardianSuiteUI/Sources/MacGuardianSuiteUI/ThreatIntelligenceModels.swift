@@ -92,13 +92,13 @@ struct ThreatFeed: Identifiable, Codable {
     }
 }
 
-struct ThreatMatch: Identifiable {
+struct ThreatMatch: Identifiable, Codable {
     let id: UUID
     let ioc: ThreatIOC
     let matchedAt: Date
     let context: String?
     let systemComponent: String? // e.g., "network_connection", "process", "file"
-    
+
     init(id: UUID = UUID(), ioc: ThreatIOC, matchedAt: Date = Date(), context: String? = nil, systemComponent: String? = nil) {
         self.id = id
         self.ioc = ioc

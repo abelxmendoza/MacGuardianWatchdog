@@ -48,6 +48,17 @@ struct CursorCacheCleanerView: View {
                 .buttonStyle(.bordered)
                 .tint(.themePurple)
                 .disabled(isLoading)
+                
+                // Close/Exit Button
+                Button {
+                    workspace.showCursorCacheCleaner = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.themeTextSecondary)
+                }
+                .buttonStyle(.plain)
+                .help("Close Cursor Cache Cleaner")
             }
             .padding()
             .background(Color.themeDarkGray)

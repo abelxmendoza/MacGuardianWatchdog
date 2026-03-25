@@ -441,20 +441,6 @@ struct ContentView: View {
         }
     }
 
-    private func openPanel() {
-        #if os(macOS)
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = "Select"
-        panel.message = "Select your MacGuardian project folder"
-        if panel.runModal() == .OK {
-            workspace.repositoryPath = panel.url?.path ?? workspace.repositoryPath
-        }
-        #endif
-    }
-    
     private func openPathPicker() {
         #if os(macOS)
         let panel = NSOpenPanel()

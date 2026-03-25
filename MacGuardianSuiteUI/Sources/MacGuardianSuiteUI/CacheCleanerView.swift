@@ -53,6 +53,17 @@ struct CacheCleanerView: View {
                 .buttonStyle(.bordered)
                 .tint(.themePurple)
                 .disabled(isLoading)
+                
+                // Close/Exit Button
+                Button {
+                    workspace.showCacheCleaner = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.themeTextSecondary)
+                }
+                .buttonStyle(.plain)
+                .help("Close Cache Cleaner")
             }
             .padding()
             .background(Color.themeDarkGray)
@@ -596,11 +607,10 @@ func getSystemCacheSize() -> CacheSize {
 }
 
 func getHomebrewCacheSize() -> CacheSize {
-    let cacheDir = "/opt/homebrew/var/cache" // Intel: /usr/local/var/cache
-    var bytes = getDirectorySize(cacheDir)
-    if bytes == 0 {
-        bytes = getDirectorySize("/usr/local/var/cache")
-    }
+    // Homebrew's download cache lives in ~/Library/Caches/Homebrew on all architectures
+    let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+    let cacheDir = "\(homeDir)/Library/Caches/Homebrew"
+    let bytes = getDirectorySize(cacheDir)
     return CacheSize(bytes: bytes, formatted: formatBytes(bytes))
 }
 

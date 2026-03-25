@@ -35,7 +35,7 @@ class EventPipeline {
     }
     
     func handleThreatEvent(_ event: ThreatEvent) {
-        if let incident = AlertEngine.shared.processEvent(event) {
+        for incident in AlertEngine.shared.processEvent(event) {
             IncidentStore.shared.add(incident)
         }
     }

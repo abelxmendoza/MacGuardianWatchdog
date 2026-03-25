@@ -3,7 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var workspace: WorkspaceState
     @StateObject private var threatService = ThreatIntelligenceService.shared
-    @State private var securityScore: Int = 85
+    @State private var securityScore: Int = 0
     @State private var lastScanDate: Date? = nil
     @State private var activeThreats: Int = 0
     
@@ -56,35 +56,23 @@ struct DashboardView: View {
                 // Quick Actions
                 QuickActionsCard(workspace: workspace)
                 
+                // System Health (live checks)
+                SystemHealthCard()
+
                 // Security Dashboards Quick Access
                 SecurityDashboardsCard()
                     .environmentObject(workspace)
-                
-                // Process Killer Quick Access
-                ProcessKillerQuickAccess()
-                    .environmentObject(workspace)
-                
-                // Cache Cleaner Quick Access
-                CacheCleanerQuickAccess()
-                    .environmentObject(workspace)
-                
-                // Cursor Cache Cleaner Quick Access
-                CursorCacheCleanerQuickAccess()
-                    .environmentObject(workspace)
-                
-                // Threat Intelligence Quick Access
-                ThreatIntelligenceQuickAccess()
-                    .environmentObject(workspace)
-                
+
                 // Omega Guardian Quick Access
                 OmegaGuardianQuickAccess()
                     .environmentObject(workspace)
-                
+
+                // Threat Intelligence Quick Access
+                ThreatIntelligenceQuickAccess()
+                    .environmentObject(workspace)
+
                 // Rootkit Scan Quick Access
                 RootkitScanQuickAccess()
-                
-                // System Health
-                SystemHealthCard()
             }
             .padding()
         }
@@ -99,15 +87,29 @@ struct DashboardView: View {
         lastScanDate = workspace.executionHistory
             .first { $0.finishedAt != nil }?
             .finishedAt
-        
-        // Calculate security score (simplified)
-        let successfulScans = workspace.executionHistory.filter {
-            if case .finished = $0.state { return true }
-            return false
-        }.count
-        let totalScans = max(workspace.executionHistory.count, 1)
-        securityScore = Int((Double(successfulScans) / Double(totalScans)) * 100)
-        
+
+        // Calculate security score based on real outcomes
+        let total = workspace.executionHistory.count
+        if total == 0 {
+            securityScore = 0
+        } else {
+            // Clean = exit code 0, threat found = exit code 1, error = anything else
+            let cleanScans = workspace.executionHistory.filter {
+                if case .finished(let code) = $0.state { return code == 0 }
+                return false
+            }.count
+            let threatScans = workspace.executionHistory.filter {
+                if case .finished(let code) = $0.state { return code == 1 }
+                return false
+            }.count
+
+            var score = Int((Double(cleanScans) / Double(total)) * 100)
+            // Each threat scan and each IOC match today reduces the score
+            score -= threatScans * 10
+            score -= threatService.stats.matchesToday * 5
+            securityScore = max(0, min(100, score))
+        }
+
         // Update active threats from threat intelligence service
         activeThreats = threatService.stats.matchesToday
     }
@@ -172,6 +174,7 @@ struct SecurityScoreCard: View {
     }
     
     private var scoreDescription: String {
+        if score == 0 { return "Run a scan to get your score" }
         if score >= 80 { return "System is secure" }
         if score >= 60 { return "Some issues detected" }
         return "Action required"
@@ -368,117 +371,6 @@ struct QuickActionsCard: View {
     }
 }
 
-struct ProcessKillerQuickAccess: View {
-    @EnvironmentObject var workspace: WorkspaceState
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Process Killer")
-                    .font(.headline)
-                    .foregroundColor(.themeText)
-                Spacer()
-                Button {
-                    workspace.showProcessKiller = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark.circle.fill")
-                        Text("Open Process Killer")
-                    }
-                    .font(.subheadline)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-            }
-            
-            Text("Quickly close applications that won't quit normally. Especially useful for Cursor, Firefox, Slack, Discord, and other stubborn apps.")
-                .font(.caption)
-                .foregroundColor(.themeTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding()
-        .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themePurpleDark, lineWidth: 1)
-        )
-    }
-}
-
-struct CacheCleanerQuickAccess: View {
-    @EnvironmentObject var workspace: WorkspaceState
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Cache Cleaner")
-                    .font(.headline)
-                    .foregroundColor(.themeText)
-                Spacer()
-                Button {
-                    workspace.showCacheCleaner = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "trash.fill")
-                        Text("Open Cache Cleaner")
-                    }
-                    .font(.subheadline)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-            }
-            
-            Text("Safely clear browser caches (Safari, Chrome, Firefox, Edge) and system caches to free up disk space. Preview before cleaning.")
-                .font(.caption)
-                .foregroundColor(.themeTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding()
-        .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themePurpleDark, lineWidth: 1)
-        )
-    }
-}
-
-struct CursorCacheCleanerQuickAccess: View {
-    @EnvironmentObject var workspace: WorkspaceState
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Cursor Cache Cleaner")
-                    .font(.headline)
-                    .foregroundColor(.themeText)
-                Spacer()
-                Button {
-                    workspace.showCursorCacheCleaner = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "cursorarrow.click")
-                        Text("Open Cursor Cleaner")
-                    }
-                    .font(.subheadline)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
-            }
-            
-            Text("Clear Cursor editor cache for your projects. Fixes cache issues and frees up disk space. Automatically scans for projects with Cursor cache.")
-                .font(.caption)
-                .foregroundColor(.themeTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding()
-        .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themePurpleDark, lineWidth: 1)
-        )
-    }
-}
-
 struct QuickActionButton: View {
     let title: String
     let icon: String
@@ -504,16 +396,37 @@ struct QuickActionButton: View {
 }
 
 struct SystemHealthCard: View {
+    @State private var firewallStatus: HealthStatus = .warning
+    @State private var filevaultStatus: HealthStatus = .warning
+    @State private var antivirusStatus: HealthStatus = .warning
+    @State private var backupStatus: HealthStatus = .warning
+    @State private var isChecking = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("System Health")
-                .font(.headline)
-                .foregroundColor(.themeText)
-            
-            HealthIndicator(title: "File Integrity", status: .good)
-            HealthIndicator(title: "Antivirus", status: .good)
-            HealthIndicator(title: "Firewall", status: .warning)
-            HealthIndicator(title: "Backups", status: .good)
+            HStack {
+                Text("System Health")
+                    .font(.headline)
+                    .foregroundColor(.themeText)
+                Spacer()
+                if isChecking {
+                    ProgressView().scaleEffect(0.7)
+                } else {
+                    Button {
+                        checkHealth()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.themePurple)
+                }
+            }
+
+            HealthIndicator(title: "Firewall", status: firewallStatus)
+            HealthIndicator(title: "FileVault", status: filevaultStatus)
+            HealthIndicator(title: "Antivirus (ClamAV)", status: antivirusStatus)
+            HealthIndicator(title: "Time Machine Backup", status: backupStatus)
         }
         .padding()
         .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
@@ -521,6 +434,53 @@ struct SystemHealthCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.themePurpleDark, lineWidth: 1)
         )
+        .onAppear { checkHealth() }
+    }
+
+    private func checkHealth() {
+        isChecking = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let fw = runCheck("/usr/libexec/ApplicationFirewall/socketfilterfw", args: ["--getglobalstate"]) { $0.lowercased().contains("enabled") }
+            let fv = runCheck("/usr/bin/fdesetup", args: ["status"]) { $0.contains("FileVault is On") }
+            let av = runCheck("/usr/bin/which", args: ["clamscan"]) { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            let bk = runBackupCheck()
+            DispatchQueue.main.async {
+                firewallStatus = fw
+                filevaultStatus = fv
+                antivirusStatus = av
+                backupStatus = bk
+                isChecking = false
+            }
+        }
+    }
+
+    private func runCheck(_ path: String, args: [String], isGood: (String) -> Bool) -> HealthStatus {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = args
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        guard (try? process.run()) != nil else { return .warning }
+        process.waitUntilExit()
+        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        return isGood(output) ? .good : .error
+    }
+
+    private func runBackupCheck() -> HealthStatus {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tmutil")
+        process.arguments = ["latestbackup"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        guard (try? process.run()) != nil else { return .warning }
+        process.waitUntilExit()
+        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        if process.terminationStatus == 0 && !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .good
+        }
+        return .warning
     }
 }
 

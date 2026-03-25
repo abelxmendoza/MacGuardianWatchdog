@@ -16,7 +16,7 @@
 
 1. **Copy theme file:**
    ```bash
-   cp macguardian-watchdog.zsh-theme ~/.oh-my-zsh/themes/macguardian-watchdog.zsh-theme
+   cp theme/macguardian-watchdog.zsh-theme ~/.oh-my-zsh/themes/macguardian-watchdog.zsh-theme
    ```
 
 2. **Set theme in `~/.zshrc`:**
@@ -32,7 +32,7 @@
 **Or for manual zsh setup (without Oh My Zsh):**
 ```bash
 # Add to ~/.zshrc
-source /path/to/macguardian-watchdog.zsh-theme
+source theme/macguardian-watchdog.zsh-theme
 ```
 
 ---

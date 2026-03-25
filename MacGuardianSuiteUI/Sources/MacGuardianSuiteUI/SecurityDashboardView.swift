@@ -23,9 +23,6 @@ struct SecurityDashboardView: View {
                 }
                 .padding(.horizontal)
                 
-                // Security Status Card
-                SecurityStatusCard()
-                
                 // Integrity Verification
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
@@ -145,27 +142,6 @@ struct SecurityDashboardView: View {
                             .tint(.themePurple)
                         }
                         
-                        Button {
-                            #if os(macOS)
-                            // Get the simple command (without echo statements) for clipboard
-                            let command = TerminalLauncher.shared.getRkhunterScanCommandForClipboard(updateFirst: true)
-                            let pasteboard = NSPasteboard.general
-                            pasteboard.clearContents()
-                            pasteboard.setString(command, forType: .string)
-                            
-                            // Also open Terminal to show the command
-                            TerminalLauncher.shared.openRkhunterScan(updateFirst: true)
-                            #endif
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.on.clipboard.fill")
-                                Text("Copy & Open Terminal")
-                                    .font(.caption)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.themePurple)
                     }
                     .padding()
                     .background(Color.themeDarkGray)
@@ -222,56 +198,6 @@ struct SecurityDashboardView: View {
                 isChecking = false
             }
         }
-    }
-}
-
-struct SecurityStatusCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "shield.checkered.fill")
-                    .foregroundColor(.green)
-                    .font(.title2)
-                Text("Security Status: Active")
-                    .font(.headline)
-                    .foregroundColor(.themeText)
-                Spacer()
-            }
-            
-            Text("All security features are enabled and protecting the app.")
-                .font(.subheadline)
-                .foregroundColor(.themeTextSecondary)
-            
-            HStack(spacing: 16) {
-                StatusBadge(icon: "key.fill", text: "Keychain", isActive: true)
-                StatusBadge(icon: "checkmark.seal.fill", text: "Integrity", isActive: true)
-                StatusBadge(icon: "lock.shield.fill", text: "Validation", isActive: true)
-            }
-        }
-        .padding()
-        .background(Color.themeDarkGray)
-        .cornerRadius(12)
-        .padding(.horizontal)
-    }
-}
-
-struct StatusBadge: View {
-    let icon: String
-    let text: String
-    let isActive: Bool
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-            Text(text)
-                .font(.caption)
-        }
-        .foregroundColor(isActive ? .green : .gray)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(isActive ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
-        .cornerRadius(6)
     }
 }
 

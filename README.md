@@ -1,798 +1,352 @@
-<div align="center">
-
-# MacGuardian Suite 🛡️
+# MacGuardian Suite
 
 ![MacGuardian Logo](MacGuardianSuiteUI/Resources/images/MacGuardianLogo.png)
 
 **Comprehensive Security Suite for macOS**
 
-A feature-rich, all-in-one security and maintenance platform for macOS that combines antivirus, threat detection, behavioral analysis, automated remediation, and monitoring—all for **FREE**.
+A free, all-in-one security and maintenance platform for macOS combining antivirus, threat detection, behavioral analysis, automated remediation, and real-time monitoring.
 
-</div>
-
-> **Note**: This suite provides many features found in commercial security tools. While not a direct replacement for enterprise EDR/XDR solutions, it offers substantial value for personal and small business use.
-
-[![macOS](https://img.shields.io/badge/macOS-10.13+-blue.svg)](https://www.apple.com/macos)
+[![macOS](https://img.shields.io/badge/macOS-14.0+-blue.svg)](https://www.apple.com/macos)
+[![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-Active-success.svg)]()
 
 ---
 
-## 🎯 What Makes This Special
+## What It Does
 
-- ✅ **All-in-One**: Combines 15+ security tools in one suite
-- ✅ **Behavioral Analysis**: ML-based pattern recognition and anomaly detection
-- ✅ **Auto-Fix**: Automatically remediates common security issues
-- ✅ **Feature-Rich**: Combines capabilities from multiple commercial security tools
-- ✅ **Privacy-First**: All processing happens locally on your Mac
-- ✅ **Open Source**: Fully customizable and transparent
-- ✅ **Performance Optimized**: Built-in performance monitoring and optimization
-- ✅ **Self-Healing**: Automatic error recovery and remediation
-- ✅ **User-Friendly**: Progress bars, step indicators, and helpful error messages
-- ✅ **Advanced Reporting**: Comparisons, PDF exports, and custom templates
-- ✅ **Native macOS App**: Beautiful SwiftUI interface with Dock integration
+MacGuardian Suite is a native macOS app (SwiftUI) backed by shell and Python scripts. It gives you real security tools — not just a UI — in one place:
+
+- **Antivirus & Rootkit Scanning** via ClamAV and rkhunter
+- **File Integrity Monitoring** — SHA-256 baseline + change detection
+- **Real-Time Threat Monitor** — live event stream via WebSocket from local daemon
+- **Threat Intelligence** — IOC matching against Abuse.ch Feodo, URLhaus, and Malware Domain List feeds, with persistent match history
+- **Blue Team Dashboard** — process analysis, network monitoring, behavioral anomaly detection
+- **Omega Guardian Alert System** — rule-based incident engine with throttling and persistent incident store
+- **Security Audit** — posture assessment with pass/fail checks and real security score
+- **Automated Remediation** — dry-run preview before any change, quarantine instead of delete
+- **Cache Cleaner** — browser (Safari, Chrome, Firefox, Edge) + system + Homebrew caches
+- **Process Killer** — force-quit stubborn apps
+- **SSH Security, User Account, Privacy, Network Graph, Incident Timeline** dashboards
+
+All data stays local. Nothing is sent to external servers except optional email reports you configure.
 
 ---
 
-## 🚀 Quick Start
+## Requirements
 
-### Prerequisites
+| Component | Minimum |
+| --------- | ------- |
+| macOS (SwiftUI app) | 14.0 (Sonoma) |
+| macOS (shell scripts) | 12.0 (Monterey) |
+| Swift | 5.9+ |
+| Homebrew | Any recent version |
 
-- **macOS 10.13 or later** (for shell scripts)
-- **macOS 14.0 or later** (for SwiftUI app)
-- **Homebrew** ([install here](https://brew.sh)) - for package management
-- **Xcode Command Line Tools** (for SwiftUI app)
-  ```bash
-  xcode-select --install
-  ```
+Install Xcode Command Line Tools if not present:
 
-### Installation Steps
+```bash
+xcode-select --install
+```
 
-#### Step 1: Clone the Repository
+---
+
+## Quick Start
+
+### Option A — Native App (Recommended)
 
 ```bash
 git clone https://github.com/abelxmendoza/MacGuardianWachdog.git
-cd MacGuardianWachdog
-```
-
-#### Step 2: Make Scripts Executable
-
-```bash
-chmod +x mac_suite.sh MacGuardianSuite/*.sh
-```
-
-#### Step 3: Run the Suite
-
-**Option A: Command Line Interface**
-```bash
-./mac_suite.sh
-```
-
-**Option B: Native macOS App** (Recommended - see below)
-
----
-
-### 🖥️ SwiftUI Companion App Setup
-
-A **native macOS application** built with SwiftUI provides a beautiful, modern interface for MacGuardian Suite.
-
-#### App Features
-
-- **Welcome Screen**: Beautiful animated welcome screen with MacGuardian logo
-- **Visual Dashboard**: Browse all MacGuardian tools organized by category
-- **Live Output Streaming**: See real-time logs as scripts execute
-- **One-Click Execution**: Run any module with a single click
-- **Native macOS Integration**: Appears in Dock, Spotlight, and Launchpad
-- **Repository Management**: Easy path configuration with Finder integration
-- **Safety Confirmations**: Built-in safeguards for destructive operations
-- **Execution History**: Track all script runs with timestamps and results
-- **Reports Viewer**: Browse and preview security reports with Omega Technologies branding
-- **Settings Panel**: Configure email, safe mode, and repository path
-- **System Tools**: Process Killer, Cache Cleaner, Cursor Cache Cleaner, Fix App Icons
-- **Progress Feedback**: Real-time progress overlays with step-by-step indicators
-- **Threat Intelligence**: IOC checking, threat feeds, and match tracking
-- **Blue Team Dashboard**: Real-time security monitoring and threat detection
-- **Security Audit Dashboard**: Comprehensive security posture assessment
-- **Remediation Center**: Automated remediation workflows
-- **Omega Guardian Alert System**: Non-spam, high-signal alerting with rule-based processing
-- **Terminal Integration**: One-click terminal launch with pre-filled commands
-
-#### Building the App
-
-**Method 1: Quick Install (Recommended)**
-```bash
-cd MacGuardianSuiteUI
-./build_app.sh
-```
-
-This will:
-- Build the SwiftUI app in release mode
-- Create a proper `.app` bundle
-- Generate the app icon from `MacGuardianLogo.png`
-- Copy all resources to the bundle
-- Set up proper bundle identifiers and metadata
-
-**Method 2: Manual Build**
-```bash
-cd MacGuardianSuiteUI
+cd MacGuardianWachdog/MacGuardianSuiteUI
 swift build -c release
-# The executable will be in .build/release/MacGuardianSuiteUI
 ```
 
-#### Installing the App
-
-After building, install the app to your Applications folder:
+Copy the built app to Applications:
 
 ```bash
-# Option 1: Command line
-cp -r "MacGuardianSuiteUI/.build/MacGuardian Suite.app" /Applications/
-
-# Option 2: Drag and drop
-# Open Finder, navigate to MacGuardianSuiteUI/.build/
-# Drag "MacGuardian Suite.app" to your Applications folder
+cp -r .build/MacGuardian\ Suite.app /Applications/
 ```
 
-#### Launching the App
+Then launch **MacGuardian Suite** from Spotlight, Applications, or the Dock.
 
-Once installed, launch "MacGuardian Suite" from:
-- **Applications folder**: Open Finder → Applications → MacGuardian Suite
-- **Spotlight**: Press `Cmd+Space`, type "MacGuardian Suite"
-- **Dock**: Click the app icon (if you've launched it before)
-- **Launchpad**: Find it in your applications grid
+First-time setup:
 
-#### First-Time Setup
+1. The app defaults to `~/Desktop/MacGuardianProject` — click the folder icon in the sidebar if your path is different
+2. Toggle **Safe Mode** on (adds confirmation dialogs before destructive operations)
+3. Optionally configure email in Settings for report delivery
 
-1. **Set Repository Path**: 
-   - The app defaults to `/Users/[username]/Desktop/MacGuardianProject`
-   - If your scripts are elsewhere, click the folder icon in the sidebar to select the correct path
-   - The app will validate the path and show a green checkmark when correct
+### Option B — Command Line
 
-2. **Configure Email** (Optional):
-   - Go to Settings tab
-   - Enter your email address for reports and alerts
-   - Click "Save Settings"
-
-3. **Enable Safe Mode** (Recommended):
-   - Toggle "Safe Mode" in the sidebar
-   - This adds extra confirmations for potentially destructive operations
-
-#### App Requirements
-
-- **macOS 14.0 or later** (Sonoma+)
-- **Swift 5.9+** (included with Xcode Command Line Tools)
-- **Xcode Command Line Tools** (install with `xcode-select --install`)
-
-> **Note**: The SwiftUI app wraps the existing shell workflows, so the underlying scripts must remain executable and accessible. Set the repository path inside the app if you keep the shell tools in a different location.
-
-#### Troubleshooting
-
-**App won't launch:**
-- Check macOS version: `sw_vers` (must be 14.0+)
-- Verify Xcode Command Line Tools: `xcode-select -p`
-- Rebuild the app: `cd MacGuardianSuiteUI && ./build_app.sh`
-
-**Scripts not found:**
-- Verify repository path in app sidebar
-- Check that scripts are executable: `chmod +x MacGuardianSuite/*.sh`
-- Ensure you're pointing to the correct directory containing `MacGuardianSuite/`
-
-**App icon not showing:**
-- Ensure `MacGuardianLogo.png` exists in `MacGuardianSuiteUI/Resources/images/`
-- Rebuild the app to regenerate the icon
-- Use "Fix App Icons" tool in the System Tools category
-- Log out and back in (or reboot) to refresh macOS icon cache
-
-### Required macOS Permissions
-
-Some features require macOS permissions. You'll be prompted when needed:
-- **Full Disk Access**: For file integrity monitoring (System Settings > Privacy & Security > Full Disk Access)
-- **Network Access**: For threat intelligence feeds (System Settings > Privacy & Security > Network)
-
-See [SECURITY.md](SECURITY.md) for detailed permission requirements.
-
-## ⚡ New Features (Latest Update)
-
-### 🎨 Enhanced UI & User Experience
-- **Welcome Screen**: Beautiful animated welcome screen with MacGuardian logo (200px) and smooth entrance animations
-- **Visual Progress Feedback**: Real-time progress overlays during cache cleaning operations
-  - Animated progress bars with percentage display
-  - Step-by-step indicators showing current operation
-  - Completed steps checklist
-  - Prevents confusion about app freezing
-- **System Tools Category**: New prominent category featuring:
-  - **Process Killer**: Safely kill processes and force quit stubborn applications (Cursor, Firefox, Slack, Discord, etc.)
-  - **Cache Cleaner**: Clear browser caches (Safari, Chrome, Firefox, Edge) and system caches with preview
-  - **Cursor Cache Cleaner**: Clear Cursor editor cache for projects, remove/reinstall node_modules
-  - **Fix App Icons**: Fix macOS app icons that aren't displaying correctly
-
-### 🛡️ Security Modules
-- **Threat Intelligence Dashboard**: 
-  - IOC (Indicators of Compromise) checking
-  - Threat feed management
-  - Threat match tracking and statistics
-  - Integration with public threat intelligence feeds
-- **Blue Team Dashboard**: 
-  - Real-time security monitoring
-  - Process analysis and network traffic monitoring
-  - File system anomaly detection
-  - Behavioral analysis and threat hunting
-- **Security Audit Dashboard**: 
-  - Comprehensive security posture assessment
-  - Security score calculation
-  - Pass/fail/warning status for each check
-  - Detailed audit results
-- **Remediation Center**: 
-  - Automated remediation workflows
-  - Preview actions before applying
-  - Impact assessment for each fix
-  - One-click fix application
-
-### 🔔 Omega Guardian Alert System
-- **Non-Spam, High-Signal Alerting**: Rule-based event processing with intelligent throttling
-- **Incident Management**: Track and manage security incidents
-- **Alert Rules**: Customizable rules for IOC matches, process behavior, network anomalies, file modifications
-- **Throttling**: Prevents alert spam with configurable cooldown periods
-- **Incident Feed**: Real-time incident tracking with severity levels
-- **Statistics Dashboard**: Alert and incident statistics
-
-### 🛡️ Auto-Fix Safety
-- **Dry-Run by Default**: All remediation runs in preview mode first
-- **Quarantine System**: Files are moved to quarantine instead of being deleted
-- **Rollback Capability**: JSON manifests with SHA-256 checksums for easy restoration
-- **Confirmation Required**: Dangerous operations require explicit user approval
-- **Manifest Tracking**: All changes tracked with metadata for audit trail
-
-### 🔧 System Integration
-- **Terminal Integration**: One-click terminal launch with pre-filled commands
-  - Rootkit scan (rkhunter) with automatic command copying to clipboard
-  - Pre-filled instructions for easy execution
-- **Email Reporting**: Enhanced email reports with Omega Technologies branding
-  - HTML-optimized email templates
-  - Embedded MacGuardian logo
-  - Dark theme styling
-  - Email client compatibility improvements
-
-### Performance Monitoring
-- Track execution times for all operations
-- Identify bottlenecks automatically
-- Get optimization suggestions
-- View performance statistics
-
-### Enhanced Error Recovery
-- Auto-retry failed operations (up to 3 attempts)
-- Exponential backoff for retries
-- Graceful degradation with fallbacks
-- Self-healing for common issues
-
-### Advanced Reporting
-- Week-over-week comparison reports
-- PDF export capability
-- Custom report templates
-- Executive summaries
-- Template system for easy customization
-- Omega Technologies branding throughout
-
----
-
-## 📋 Complete Feature List
-
-### 🧹 Mac Guardian (Cleanup & Security)
-- **Homebrew Management**: Auto-updates and upgrades packages
-- **System Updates**: Checks for macOS updates
-- **Antivirus Scanning**: ClamAV with optimized fast scanning
-- **Rootkit Detection**: rkhunter integration
-- **Security Checks**: Firewall, Gatekeeper, SIP, processes, network
-- **Parallel Processing**: Multi-threaded security checks
-- **HTML Reports**: Professional security reports
-- **Performance Monitoring**: Track execution times, identify bottlenecks
-- **Error Recovery**: Auto-retry with exponential backoff, graceful degradation
-- **UX Enhancements**: Progress bars, step indicators, better error messages
-
-### 🐺 Mac Watchdog (File Integrity Monitor / Tripwire)
-- **Tripwire Functionality**: SHA-256 checksums with incremental hashing
-- **File Integrity Monitoring**: Detects unauthorized file changes
-- **Baseline Creation**: Establishes file fingerprints for comparison
-- **Change Detection**: Alerts on file modifications, additions, deletions
-- **Honeypot Detection**: Monitors fake credential files
-- **System Log Monitoring**: Tracks significant log changes
-- **Performance Tracking**: Monitor scan performance and optimize
-- **Advanced Algorithms**: Hash tables, LRU cache, optimized diff
-- **Email Alerts**: Configurable alert system
-
-### 🔵 Mac Blue Team (Advanced Threat Detection)
-- **Process Analysis**: Suspicious process detection
-- **Network Analysis**: Connection monitoring and threat detection
-- **File System Anomalies**: Detects unauthorized changes
-- **Behavioral Analysis**: Pattern recognition and anomaly detection
-- **Threat Hunting**: Proactive threat searching
-- **Forensic Analysis**: System snapshots and evidence collection
-- **IOC Database**: Indicators of Compromise tracking
-- **Parallel Processing**: Multi-threaded analysis
-- **Real-Time Dashboard**: SwiftUI dashboard with live metrics and event feed
-- **System Stats**: CPU, memory, disk, and network monitoring
-
-### 🤖 Mac AI (Intelligent Security Analysis)
-- **Behavioral Anomaly Detection**: ML-powered analysis
-- **Pattern Recognition**: Identifies suspicious patterns
-- **Predictive Threat Analysis**: Forecasts potential threats
-- **Intelligent File Classification**: ML-based file categorization
-- **Online Learning**: Continuously improves detection
-- **Optimized for M1 Pro**: Leverages Apple Neural Engine
-
-### 🔍 Mac Security Audit (Comprehensive Assessment)
-- **FileVault Status**: Encryption verification
-- **SIP Status**: System Integrity Protection checks
-- **Gatekeeper Status**: Application security verification
-- **SSL/TLS Certificates**: Certificate expiration monitoring
-- **Launch Items**: Persistence mechanism analysis
-- **Lynis Integration**: Optional professional auditing
-- **Security Dashboard**: Visual security score and check status
-- **Detailed Results**: Pass/fail/warning status for each check
-
-### 🔧 Mac Remediation (Auto-Fix Security Issues)
-- **File Permission Fixes**: Automatically corrects permissions
-- **Disk Cleanup**: Removes unnecessary files
-- **Suspicious Process Handling**: Identifies and reports high-resource processes
-- **Suspicious File Removal**: Safe removal with backups
-- **Launch Item Cleanup**: Removes malicious persistence
-- **Dry-Run Mode**: Preview changes before applying
-- **Backup Creation**: Automatic backups before fixes
-- **Remediation Center UI**: Visual interface for managing and applying fixes
-- **Impact Assessment**: Shows impact level for each remediation action
-
-### 📊 Scheduled Reports (Phase 1)
-- **Automated Reports**: Daily/weekly/monthly generation
-- **Executive Summary**: High-level security metrics
-- **HTML & Text Formats**: Professional report generation
-- **Email Delivery**: Automated report distribution
-- **Security Dashboard**: Visual status overview
-
-### 🔔 Advanced Alerting & Omega Guardian System
-- **Custom Alert Rules**: Configurable rule engine
-- **Multiple Severity Levels**: Critical/High/Medium/Low
-- **Action Chains**: notify+log+email+escalate
-- **Cooldown Management**: Prevents alert spam
-- **Alert History**: Complete audit trail
-- **Escalation Support**: Multi-level alerting
-- **Omega Guardian Alert System**: Non-spam, high-signal alerting
-  - Rule-based event processing
-  - Intelligent throttling
-  - Incident management
-  - Real-time incident feed
-  - Alert statistics dashboard
-
-### 📧 Email Security (Phase 1)
-- **Attachment Scanning**: ClamAV email scanning
-- **Phishing Detection**: URL pattern analysis
-- **Multi-Client Support**: Mail, Thunderbird, Outlook
-
-### 💾 Backup Verification (Phase 1)
-- **Time Machine Status**: Active backup monitoring
-- **Backup Integrity**: Verification and testing
-- **Age Monitoring**: Stale backup detection
-
-### 🛡️ Hardening Assessment
-- **20+ Security Checks**: Comprehensive evaluation
-- **Hardening Score**: 0-100% security rating
-- **Compliance Ready**: HIPAA, GDPR, PCI-DSS support
-- **Personalized Recommendations**: Actionable improvements
-
-### 🔍 Error Tracking & Debugging
-- **Centralized Error Database**: JSON-based error tracking
-- **Auto-Fix Detection**: Identifies fixable errors
-- **Error Viewer**: Interactive error management
-- **Enhanced Debugging**: Stack traces and diagnostics
-- **System Diagnostics**: Complete system information
-
-### ✅ Suite Verification
-- **Automated Testing**: Comprehensive component testing
-- **Dependency Checking**: Verifies all requirements
-- **Health Checks**: System status validation
-
----
-
-## 🎮 Main Menu
-
-```
-1) Run Mac Guardian (Cleanup & Security)
-2) Run Mac Watchdog (File Integrity Monitor)
-3) Run Mac Blue Team (Advanced Threat Detection)
-4) Run Mac AI (Intelligent Security Analysis)
-5) Run Mac Security Audit (Comprehensive Security Assessment)
-6) Run Mac Remediation (Auto-Fix Security Issues)
-7) Run all (Guardian, Watchdog, Blue Team, AI, Audit)
-8) Verify Suite (Test All Components)
-9) View & Fix Errors (Error Database)
-10) Hardening Assessment (Security Evaluation)
-11) Generate Security Report
-12) Setup Phase 1 Features (Reports & Alerts)
-13) Test Email (Send Test Email)
-14) Performance Monitor (View Performance Stats)
-15) Advanced Reports (Comparisons, PDF Export)
-16) Exit
-```
-
----
-
-## 📦 Installation
-
-### Prerequisites
-- macOS 10.13 or later
-- Homebrew ([install here](https://brew.sh))
-- Administrator privileges (for some operations)
-
-### Step 1: Clone Repository
 ```bash
 git clone https://github.com/abelxmendoza/MacGuardianWachdog.git
 cd MacGuardianWachdog
-```
-
-### Step 2: Make Executable
-```bash
 chmod +x mac_suite.sh MacGuardianSuite/*.sh
-```
-
-### Step 3: Run Setup (Optional)
-```bash
-# Setup automated scheduling
-./MacGuardianSuite/install_scheduler.sh
-
-# Setup Phase 1 features (reports & alerts)
-./MacGuardianSuite/setup_phase1_features.sh
-```
-
-### Step 4: Start Using
-```bash
 ./mac_suite.sh
 ```
 
 ---
 
-## ⚙️ Configuration
+## Permissions
 
-Configuration is stored in `~/.macguardian/config.conf`. Key settings:
+Some features require macOS permissions granted in **System Settings > Privacy & Security**:
+
+| Permission | Required For |
+| ---------- | ------------ |
+| Full Disk Access | File integrity monitoring, baseline creation |
+| Network Access | Threat intelligence feed updates |
+| Accessibility | Advanced process monitoring (optional) |
+
+---
+
+## Core Modules
+
+### mac_guardian.sh — Cleanup & Security
+
+- Homebrew updates, macOS update checks
+- ClamAV antivirus scan (fast mode by default)
+- rkhunter rootkit detection
+- Firewall, Gatekeeper, SIP, FileVault, Time Machine checks
+- Checkpoint/resume support for interrupted runs
+- HTML report generation
+
+### mac_watchdog.sh — File Integrity Monitor
+
+- SHA-256 baseline creation and incremental comparison
+- Detects modifications, additions, and deletions
+- Honeypot file monitoring
+- Email alerts on changes
+
+### mac_blueteam.sh — Threat Detection
+
+- Process anomaly detection
+- Network connection analysis and C2 detection
+- File system anomaly scanning
+- Behavioral pattern analysis and threat hunting
+- Optional: osquery, nmap, yara integration
+
+### mac_ai.sh / ai_engine.py / ml_engine.py — ML Analysis
+
+- Behavioral anomaly detection
+- File classification
+- Predictive threat analysis
+- Online learning (improves over time)
+
+### mac_security_audit.sh — Security Audit
+
+- FileVault, SIP, Gatekeeper, launch item checks
+- SSL/TLS certificate monitoring
+- Optional Lynis integration
+- Scored output (pass/fail/warning per check)
+
+### mac_remediation.sh — Auto-Fix
+
+- Dry-run by default — preview before applying
+- Quarantine instead of delete
+- Rollback manifests with SHA-256 checksums
+- File permission fixes, launch item cleanup, suspicious process reporting
+
+---
+
+## CLI Usage Reference
 
 ```bash
-# Notification settings
+# Full interactive menu
+./mac_suite.sh
+
+# Individual modules
+./MacGuardianSuite/mac_guardian.sh           # Security scan + cleanup
+./MacGuardianSuite/mac_guardian.sh -y        # Non-interactive
+./MacGuardianSuite/mac_guardian.sh -q        # Quiet mode
+./MacGuardianSuite/mac_guardian.sh --report  # Generate HTML report
+
+./MacGuardianSuite/mac_watchdog.sh
+./MacGuardianSuite/mac_blueteam.sh --threat-hunt --nmap
+./MacGuardianSuite/mac_security_audit.sh --lynis
+./MacGuardianSuite/hardening_assessment.sh   # Hardening score (0-100)
+./MacGuardianSuite/scheduled_reports.sh daily
+
+# Set up launchd automation
+./MacGuardianSuite/install_scheduler.sh
+```
+
+---
+
+## Configuration
+
+`~/.macguardian/config.conf` is created automatically on first run.
+
+```bash
+# Scanning
+FAST_SCAN_DEFAULT=true
+CLAMAV_MAX_FILESIZE=100M
+
+# Notifications
 ENABLE_NOTIFICATIONS=true
-NOTIFICATION_SOUND=true
-NOTIFICATION_COOLDOWN=300  # 5 minutes
+NOTIFICATION_COOLDOWN=300
 
 # Parallel processing
 ENABLE_PARALLEL=true
-PARALLEL_JOBS=""  # Auto-detect
 
-# ClamAV settings
-FAST_SCAN_DEFAULT=true
-CLAMAV_MAX_FILESIZE=100M
-CLAMAV_MAX_FILES=50000
-
-# Report settings
-REPORT_EMAIL=""  # Set for email reports
+# Reporting
+REPORT_EMAIL=""
 REPORT_SCHEDULE="daily"
 REPORT_FORMAT="html"
 
-# Alerting settings
+# Alerting
 ALERT_EMAIL=""
 ALERT_ENABLED=true
 ```
 
 ---
 
-## 🚀 Usage Examples
+## Automated Scheduling
 
-### Basic Security Scan
-```bash
-./MacGuardianSuite/mac_guardian.sh
-```
+Install launchd jobs to run scans automatically:
 
-### Full Security Suite
-```bash
-./mac_suite.sh
-# Select option 7: "Run all"
-```
-
-### Hardening Assessment
-```bash
-./MacGuardianSuite/hardening_assessment.sh
-```
-
-### Generate Security Report
-```bash
-./MacGuardianSuite/scheduled_reports.sh daily
-```
-
-### View and Fix Errors
-```bash
-./MacGuardianSuite/view_errors.sh
-```
-
-### Advanced Alerting
-```bash
-# Process alert rules
-./MacGuardianSuite/advanced_alerting.sh process
-
-# List configured rules
-./MacGuardianSuite/advanced_alerting.sh list
-
-# View alert history
-./MacGuardianSuite/advanced_alerting.sh history
-```
-
----
-
-## 📊 Market Comparison
-
-| Feature | MacGuardian | Commercial Tools | Cost |
-|---------|-------------|------------------|------|
-| Antivirus | ✅ ClamAV | ✅ | $50-100/year |
-| EDR/Threat Detection | ✅ Blue Team | ✅ CrowdStrike | $8-15/month |
-| AI/ML Security | ✅ AI Engine | ✅ SentinelOne | $10-20/month |
-| File Integrity | ✅ Watchdog | ✅ Tripwire | $200-500/year |
-| Security Auditing | ✅ Audit | ✅ Lynis Pro | $500-2000/year |
-| Auto-Remediation | ✅ Remediation | ❌ Custom | $5000+ |
-| Hardening Assessment | ✅ Assessment | ✅ Consultants | $500-1000 |
-| Centralized Logging | ✅ Error DB | ✅ SIEM | $1000-5000/year |
-| Scheduled Reports | ✅ Reports | ✅ Enterprise | $300-600/year |
-| Advanced Alerting | ✅ Alerts | ✅ PagerDuty | $200-500/year |
-| Performance Monitoring | ✅ Built-in | ❌ Custom | $500-1,000/year |
-| Error Recovery | ✅ Auto-retry | ❌ Manual | $1,000-2,000/year |
-| Advanced Reporting | ✅ Comparisons/PDF | ✅ Enterprise | $500-1,500/year |
-| **Total Value** | **✅ All** | **❌ Fragmented** | **$10,000-20,000/year** |
-
-**Note**: These are approximate costs for equivalent commercial tools. MacGuardian Suite provides similar functionality for FREE, though it's designed for personal/small business use rather than enterprise-scale deployments.
-
----
-
-## 🏗️ Architecture
-
-```
-MacGuardianProject/
-├── mac_suite.sh                    # Main launcher
-├── MacGuardianSuite/
-│   ├── mac_suite.sh               # Interactive menu
-│   ├── mac_guardian.sh            # Security & cleanup
-│   ├── mac_watchdog.sh            # File integrity monitor
-│   ├── mac_blueteam.sh            # Advanced threat detection
-│   ├── mac_ai.sh                  # AI/ML security analysis
-│   ├── mac_security_audit.sh      # Comprehensive audit
-│   ├── mac_remediation.sh         # Auto-fix security issues
-│   ├── scheduled_reports.sh       # Automated reporting
-│   ├── advanced_alerting.sh       # Custom alert rules
-│   ├── hardening_assessment.sh    # Security evaluation
-│   ├── view_errors.sh             # Error viewer & fixer
-│   ├── verify_suite.sh            # Component verification
-│   ├── add_email_security.sh      # Email scanning
-│   ├── add_backup_verification.sh # Backup checks
-│   ├── setup_phase1_features.sh   # Phase 1 setup
-│   ├── config.sh                  # Configuration system
-│   ├── utils.sh                   # Shared utilities
-│   ├── algorithms.sh              # Advanced algorithms
-│   ├── error_tracker.sh           # Error tracking
-│   ├── debug_helper.sh            # Enhanced debugging
-│   ├── ai_engine.py               # Python AI engine
-│   ├── ml_engine.py               # Advanced ML engine
-│   └── install_scheduler.sh       # Scheduler installer
-├── MacGuardianSuiteUI/            # Native macOS SwiftUI App
-│   ├── Package.swift              # Swift package manifest
-│   ├── build_app.sh               # App bundle builder
-│   ├── Resources/
-│   │   └── images/
-│   │       └── MacGuardianLogo.png  # App logo
-│   └── Sources/
-│       └── MacGuardianSuiteUI/
-│           ├── MacGuardianSuiteUIApp.swift  # App entry point
-│           ├── ContentView.swift           # Main interface
-│           ├── WelcomeView.swift           # Welcome screen
-│           ├── DashboardView.swift          # Dashboard
-│           ├── ToolDetailView.swift         # Tool execution view
-│           ├── AppState.swift               # State management
-│           ├── ProcessKillerView.swift     # Process killer UI
-│           ├── CacheCleanerView.swift      # Cache cleaner UI
-│           ├── CursorCacheCleanerView.swift # Cursor cache cleaner
-│           ├── FixAppIconsView.swift        # App icon fixer
-│           ├── ThreatIntelligenceView.swift # Threat intel dashboard
-│           ├── BlueTeam/                    # Blue Team module
-│           │   ├── BlueTeamDashboardView.swift
-│           │   ├── BlueTeamViewModel.swift
-│           │   └── BlueTeamModels.swift
-│           ├── SecurityAudit/               # Security Audit module
-│           │   ├── SecurityAuditView.swift
-│           │   ├── SecurityAuditViewModel.swift
-│           │   └── SecurityAuditModels.swift
-│           ├── Remediation/                 # Remediation module
-│           │   ├── RemediationCenterView.swift
-│           │   ├── RemediationViewModel.swift
-│           │   └── RemediationModels.swift
-│           └── OmegaGuardian/               # Omega Guardian alerts
-│               ├── OmegaGuardianView.swift
-│               ├── AlertEngine.swift
-│               ├── IncidentStore.swift
-│               └── EventPipeline.swift
-└── README.md                      # This file
-```
-
----
-
-## 🔐 Security Features
-
-### System Hardening
-- ✅ System Integrity Protection (SIP) monitoring
-- ✅ Gatekeeper verification
-- ✅ FileVault encryption status
-- ✅ Firewall configuration
-- ✅ Automatic security updates
-
-### Threat Detection
-- ✅ Real-time process monitoring
-- ✅ Network traffic analysis
-- ✅ File system anomaly detection
-- ✅ Behavioral pattern analysis
-- ✅ Rootkit detection
-- ✅ Malware scanning
-
-### Monitoring & Response
-- ✅ File integrity monitoring
-- ✅ Honeypot detection
-- ✅ Automated remediation
-- ✅ Incident logging
-- ✅ Threat intelligence
-
----
-
-## 📈 Performance Optimizations
-
-- **Parallel Processing**: Multi-threaded execution
-- **Incremental Hashing**: Only re-hashes changed files
-- **Hash Tables**: O(1) lookups for file comparisons
-- **LRU Cache**: Efficient metadata caching
-- **Optimized Find**: Excludes unnecessary directories
-- **Fast ClamAV**: Skips large/media files
-- **Smart Algorithms**: Advanced data structures
-
----
-
-## 🎓 Documentation
-
-- **[QUICK_START.md](QUICK_START.md)**: Getting started guide
-- **[ENTERPRISE_FEATURES.md](MacGuardianSuite/ENTERPRISE_FEATURES.md)**: Enterprise capabilities
-- **[FEATURE_ROADMAP.md](MacGuardianSuite/FEATURE_ROADMAP.md)**: Future features
-- **[MARKET_COMPARISON.md](MacGuardianSuite/MARKET_COMPARISON.md)**: Commercial comparison
-- **[VERIFICATION_GUIDE.md](MacGuardianSuite/VERIFICATION_GUIDE.md)**: Testing guide
-- **[BLUETEAM_FEATURES.md](BLUETEAM_FEATURES.md)**: Blue Team details
-- **[AI_FEATURES.md](AI_FEATURES.md)**: AI/ML capabilities
-
----
-
-## 🔄 Automated Scheduling
-
-The scheduler can run:
-- **Daily**: Mac Watchdog at 2:00 AM
-- **Weekly**: Mac Guardian at 3:00 AM (Sundays)
-- **Daily Reports**: Security reports at 9:00 AM
-
-Install:
 ```bash
 ./MacGuardianSuite/install_scheduler.sh
 ```
 
+Default schedule:
+
+- **Daily at 2:00 AM** — Mac Watchdog (file integrity)
+- **Sundays at 3:00 AM** — Mac Guardian (full security scan)
+- **Daily at 9:00 AM** — Security report generation
+
 ---
 
-## 🐛 Troubleshooting
+## Recent Changes
 
-### Permission Issues
-Some operations require administrator privileges. The script will prompt when needed.
+### Security & Data Integrity Fixes
 
-### Debug Mode
-Enable detailed debugging:
+- **Threat match persistence** — `ThreatMatch` is now `Codable`; match history survives app restarts. `loadThreatMatches` and `saveThreatMatches` are fully implemented.
+- **Alert engine IOC matching** — `iocMatch` condition now only fires when `event.category` is an actual IOC type (ip, domain, hash, url, file\_path). Previously it fired on any medium+ severity event regardless of type.
+- **Alert engine completeness** — `processEvent` now returns all matching rule incidents, not just the first match.
+
+### Dashboard
+
+- **Security score** — calculated from real scan exit codes (exit 0 = clean, exit 1 = threat found) and IOC match count. No longer a hardcoded 85% default. Shows "Run a scan to get your score" when no data exists.
+- **System Health card** — runs live checks on every load: firewall (`socketfilterfw`), FileVault (`fdesetup`), ClamAV presence (`which clamscan`), Time Machine backup (`tmutil latestbackup`). No longer hardcoded.
+- **Dashboard decluttered** — removed redundant quick-access cards for Process Killer, Cache Cleaner, and Cursor Cache Cleaner. System Health moved to top.
+
+### Cache Cleaner
+
+- **Homebrew cache size** now reads from `~/Library/Caches/Homebrew` (the actual location). Previously checked `/opt/homebrew/var/cache` which always returned 0.
+- Close buttons added to Cache Cleaner and Cursor Cache Cleaner sheets.
+
+### Code Cleanup
+
+- Removed `SecurityStatusCard` — was always hardcoded green, never checked anything real.
+- Removed unreachable `SecurityScoreView` — no tab routed to it and all score values were hardcoded.
+- Removed duplicate `openPanel()` function in `ContentView` (identical to `openPathPicker()`).
+- Removed unused `showThreatIntelligence` bool from `WorkspaceState`.
+- Removed redundant "Copy & Open Terminal" rootkit button from `SecurityDashboardView`.
+
+---
+
+## Troubleshooting
+
+### App won't launch
+
+- Verify macOS 14.0+: `sw_vers`
+- Verify Xcode tools: `xcode-select -p`
+- Rebuild: `cd MacGuardianSuiteUI && swift build -c release`
+
+### Scripts not found
+
+- Set the repository path in the app sidebar (folder icon)
+- Ensure scripts are executable: `chmod +x MacGuardianSuite/*.sh`
+
+### Real-time monitor shows disconnected
+
+- The event daemon must be running: `python3 MacGuardianSuite/event_bus.py`
+- The app connects to `ws://localhost:9765`
+
+### ClamAV not installed
+
+```bash
+brew install clamav
+freshclam
+```
+
+### rkhunter not installed
+
+```bash
+brew install rkhunter
+sudo rkhunter --update
+```
+
+### Debug mode
+
 ```bash
 DEBUG=true ./MacGuardianSuite/mac_guardian.sh
 ```
 
-### View Errors
-Check the error database:
+### View error database
+
 ```bash
 ./MacGuardianSuite/view_errors.sh
 ```
 
-### Verify Installation
-Run the verification suite:
+### Verify all components
+
 ```bash
 ./MacGuardianSuite/verify_suite.sh
 ```
 
 ---
 
-## 💡 Best Practices
+## Logs and Data
 
-1. **Run weekly**: Full security suite (option 7)
-2. **Review reports**: Check `~/.macguardian/reports/`
-3. **Monitor alerts**: Review alert history regularly
-4. **Keep updated**: Run Guardian to update tools
-5. **Check hardening**: Run assessment monthly
-6. **Review errors**: Use error viewer to fix issues
-
----
-
-## 🏆 Enterprise Features
-
-### Compliance Ready
-- ✅ HIPAA compliance checking
-- ✅ GDPR data protection
-- ✅ PCI-DSS security monitoring
-- ✅ SOC 2 controls
-
-### Professional Capabilities
-- ✅ 24/7 automated monitoring
-- ✅ Incident response automation
-- ✅ Complete audit trails
-- ✅ Executive reporting
-- ✅ Multi-device ready
+| Path | Contents |
+| ---- | -------- |
+| `~/.macguardian/logs/` | Script execution logs |
+| `~/.macguardian/reports/` | Generated HTML security reports |
+| `~/.macguardian/config.conf` | User configuration |
+| `~/.macguardian/omega_guardian/` | Omega Guardian incidents and alert rules |
+| `~/.macguardian/threat_intel/` | IOC database and match history |
+| `~/MacGuardian/quarantine/` | Files moved by remediation (not deleted) |
 
 ---
 
-## 📊 Statistics
+## Documentation
 
-- **Total Lines of Code**: 15,000+
-- **Security Checks**: 50+
-- **AI/ML Models**: 5+
-- **Algorithms**: 20+
-- **Scripts/Modules**: 35+
-- **UI Views**: 20+
-- **SwiftUI Components**: 30+
-- **Equivalent Commercial Value**: $10,000-20,000/year (approximate)
-- **Your Cost**: FREE
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Areas for improvement:
-- Additional security tools integration
-- More AI/ML models
-- Enhanced reporting
-- Multi-device management
-- Cloud integration options
+| File | Contents |
+| ---- | -------- |
+| [SECURITY.md](SECURITY.md) | Security policy, vulnerability reporting, sudo guide, app security features |
+| [PRIVACY.md](PRIVACY.md) | Data collection, retention, and opt-out |
+| [RELEASE.md](RELEASE.md) | Release process and versioning |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Hybrid SIEM/EDR architecture overview |
+| [docs/BLUETEAM.md](docs/BLUETEAM.md) | Blue Team module details |
+| [docs/AI_ML.md](docs/AI_ML.md) | AI and ML engine details |
+| [docs/VERIFICATION_GUIDE.md](docs/VERIFICATION_GUIDE.md) | Testing and component verification |
+| [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) | Planned features and gap analysis |
+| [docs/FRAMEWORK_ALIGNMENT.md](docs/FRAMEWORK_ALIGNMENT.md) | MITRE ATT&CK / NIST framework mapping |
+| [docs/TOOL_RECOMMENDATIONS.md](docs/TOOL_RECOMMENDATIONS.md) | Optional tool integrations |
+| [docs/TERMINAL_GUIDE.md](docs/TERMINAL_GUIDE.md) | Terminal basics for new users |
 
 ---
 
-## 📝 License
+## Security & Privacy
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+- All scan data stored locally — nothing sent externally except email reports you configure
+- Passwords stored in macOS Keychain (never UserDefaults)
+- File integrity verification runs on app startup for critical scripts
+- All remediation dry-runs by default; quarantine instead of delete
+- Rollback supported via JSON manifests with SHA-256 checksums
 
-## 🔒 Security & Privacy
-
-- **[SECURITY.md](SECURITY.md)**: Security policy, vulnerability reporting, and best practices
-- **[PRIVACY.md](PRIVACY.md)**: Data collection, retention, and privacy controls
-
-**Key Safety Features**:
-- Dry-run mode by default for all remediation
-- Quarantine system (files moved, not deleted)
-- Rollback capability with JSON manifests
-- All data stored locally on your Mac
+See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md) for full details.
 
 ---
 
-## 🙏 Acknowledgments
+## Built With
 
-Built with:
-- ClamAV (antivirus)
-- rkhunter (rootkit detection)
-- LuLu (outbound firewall)
-- scikit-learn (machine learning)
-- Homebrew (package management)
-
----
-
-## 📞 Support
-
-- **Documentation**: See `MacGuardianSuite/` for detailed guides
-- **Error Tracking**: Use `view_errors.sh` to diagnose issues
-- **Verification**: Run `verify_suite.sh` to test components
-- **Logs**: Check `~/.macguardian/logs/` for detailed logs
+- [ClamAV](https://www.clamav.net/) — antivirus engine
+- [rkhunter](http://rkhunter.sourceforge.net/) — rootkit detection
+- [scikit-learn](https://scikit-learn.org/) — ML models
+- [Homebrew](https://brew.sh/) — package management
+- SwiftUI — native macOS interface
 
 ---
 
-**Stay secure! 🔐**
+## License
 
-*MacGuardian Suite - Enterprise-Grade Security for Everyone*
+MIT License — see [LICENSE](LICENSE) for details.

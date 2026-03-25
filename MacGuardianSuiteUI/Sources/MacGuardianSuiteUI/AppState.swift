@@ -135,7 +135,6 @@ final class WorkspaceState: ObservableObject {
     @Published var showProcessKiller: Bool = false
     @Published var showCacheCleaner: Bool = false
     @Published var showCursorCacheCleaner: Bool = false
-    @Published var showThreatIntelligence: Bool = false
     @Published var showSidebar: Bool = true {
         didSet {
             UserDefaults.standard.set(showSidebar, forKey: "showSidebar")
@@ -154,14 +153,7 @@ final class WorkspaceState: ObservableObject {
         .appendingPathComponent("Desktop")
         .appendingPathComponent("MacGuardianProject").path) {
         self.repositoryPath = defaultPath
-        
-        // Auto-skip welcome screen - always skip for now to get to main app
-        // User can access settings later if needed
-        let hasSeenBefore = UserDefaults.standard.bool(forKey: "hasSeenWelcome")
-        let pathExists = FileManager.default.fileExists(atPath: defaultPath)
-        
-        // Auto-skip welcome screen if path exists, user has seen it, or always skip for better UX
-        self.hasSeenWelcome = true  // Always skip welcome screen - go straight to main app
+        self.hasSeenWelcome = true
         self.safeMode = UserDefaults.standard.object(forKey: "safeMode") as? Bool ?? true
         self.showSidebar = UserDefaults.standard.object(forKey: "showSidebar") as? Bool ?? true
         self.reportEmail = UserDefaults.standard.string(forKey: "reportEmail") ?? ""
@@ -438,7 +430,7 @@ final class ShellCommandRunner {
             
             // Set environment variables
             var env = Foundation.ProcessInfo.processInfo.environment
-            env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
             env["SHELL"] = "/bin/zsh"
             process.environment = env
             
