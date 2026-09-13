@@ -139,7 +139,8 @@ class ThreatIntelligenceService: ObservableObject {
             
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-c", "cd '\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite' && bash '\(scriptPath)' update"]
+            let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite"
+            process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted) update"]
             
             let pipe = Pipe()
             process.standardOutput = pipe

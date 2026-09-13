@@ -5,26 +5,25 @@ import AppKit
 
 class SecurityAuditScriptService {
     static let shared = SecurityAuditScriptService()
-    
-    private let repositoryPath: String
-    
-    private init() {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        repositoryPath = "\(homeDir)/Desktop/MacGuardianProject"
-    }
-    
-    func runAudit() async -> ([AuditCheck], AuditSummary) {
-        let scriptPath = "\(repositoryPath)/MacGuardianSuite/mac_security_audit.sh"
-        
+
+    private init() {}
+
+    /// `repositoryPath` should come from the user's configured
+    /// WorkspaceState.repositoryPath, the same way every other tool in the
+    /// app locates its scripts - not a hardcoded guess at where the repo lives.
+    func runAudit(repositoryPath: String) async -> ([AuditCheck], AuditSummary) {
+        let scriptDir = "\(repositoryPath)/MacGuardianSuite"
+        let scriptPath = "\(scriptDir)/mac_security_audit.sh"
+
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             return ([], AuditSummary())
         }
-        
+
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                process.arguments = ["-c", "cd '\(self.repositoryPath)/MacGuardianSuite' && ./mac_security_audit.sh --json 2>&1"]
+                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_security_audit.sh --json 2>&1"]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe

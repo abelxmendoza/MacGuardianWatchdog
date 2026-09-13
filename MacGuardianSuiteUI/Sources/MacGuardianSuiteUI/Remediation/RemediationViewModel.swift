@@ -11,24 +11,24 @@ class RemediationViewModel: ObservableObject {
     @Published var selectedAction: RemediationAction?
     @Published var showConfirmation = false
     
-    func load() async {
+    func load(repositoryPath: String) async {
         loading = true
         errorMessage = nil
-        
-        let loadedActions = await RemediationScriptService.shared.previewActions()
+
+        let loadedActions = await RemediationScriptService.shared.previewActions(repositoryPath: repositoryPath)
         actions = loadedActions
         loading = false
-        
+
         if actions.isEmpty && errorMessage == nil {
             errorMessage = "No remediation actions found. The script may need to be run from Terminal."
         }
     }
-    
-    func apply(_ action: RemediationAction, dryRun: Bool = false) async -> Bool {
+
+    func apply(_ action: RemediationAction, repositoryPath: String, dryRun: Bool = false) async -> Bool {
         applying = true
         errorMessage = nil
-        
-        let (success, message) = await RemediationScriptService.shared.applyFix(action: action, dryRun: dryRun)
+
+        let (success, message) = await RemediationScriptService.shared.applyFix(action: action, repositoryPath: repositoryPath, dryRun: dryRun)
         
         let result = RemediationResult(
             action: action,

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RemediationCenterView: View {
+    @EnvironmentObject private var workspace: WorkspaceState
     @StateObject private var vm = RemediationViewModel()
     @State private var selectedAction: RemediationAction?
     @State private var showActionDetail = false
@@ -168,14 +169,14 @@ struct RemediationCenterView: View {
         .background(Color.themeBlack)
         .task {
             if vm.actions.isEmpty {
-                await vm.load()
+                await vm.load(repositoryPath: workspace.repositoryPath)
             }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     Task {
-                        await vm.load()
+                        await vm.load(repositoryPath: workspace.repositoryPath)
                     }
                 } label: {
                     Label("Reload Actions", systemImage: "arrow.clockwise")
@@ -190,14 +191,14 @@ struct RemediationCenterView: View {
             Button("Dry Run") {
                 if let action = vm.selectedAction {
                     Task {
-                        await vm.apply(action, dryRun: true)
+                        await vm.apply(action, repositoryPath: workspace.repositoryPath, dryRun: true)
                     }
                 }
             }
             Button("Apply Fix", role: .destructive) {
                 if let action = vm.selectedAction {
                     Task {
-                        await vm.apply(action, dryRun: false)
+                        await vm.apply(action, repositoryPath: workspace.repositoryPath, dryRun: false)
                     }
                 }
             }
@@ -235,6 +236,7 @@ struct RemediationCenterView: View {
 }
 
 struct RemediationActionCard: View {
+    @EnvironmentObject private var workspace: WorkspaceState
     let action: RemediationAction
     @ObservedObject var viewModel: RemediationViewModel
     
@@ -301,7 +303,7 @@ struct RemediationActionCard: View {
                 
                 Button {
                     Task {
-                        await viewModel.apply(action, dryRun: true)
+                        await viewModel.apply(action, repositoryPath: workspace.repositoryPath, dryRun: true)
                     }
                 } label: {
                     Label("Dry Run", systemImage: "eye.fill")

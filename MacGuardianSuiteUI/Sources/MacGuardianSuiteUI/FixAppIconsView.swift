@@ -254,24 +254,18 @@ func runFixAppIconsScript(args: [String], appPath: String?) -> (success: Bool, m
     
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    
-    // Properly escape arguments for shell
-    func escapeShell(_ arg: String) -> String {
-        // Escape single quotes by replacing ' with '\''
-        let cleaned = arg.replacingOccurrences(of: "'", with: "'\\''")
-        return "'\(cleaned)'"
-    }
-    
-    var command = "cd '\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite' && bash '\(scriptPath)'"
-    
-    // Add regular arguments
+
+    let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite"
+    var command = "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted)"
+
+    // Add regular arguments (fixed flags from the UI, but quoted regardless)
     if !args.isEmpty {
-        command += " \(args.joined(separator: " "))"
+        command += " " + args.map { $0.shellQuoted }.joined(separator: " ")
     }
-    
+
     // Add app path separately with proper quoting
     if let appPath = appPath {
-        command += " --app \(escapeShell(appPath))"
+        command += " --app \(appPath.shellQuoted)"
     }
     
     process.arguments = ["-c", command]
@@ -305,7 +299,8 @@ func runSetAppIconScript(scriptPath: String) -> (success: Bool, message: String)
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
     
-    let command = "cd '\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuiteUI' && bash '\(scriptPath)'"
+    let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuiteUI"
+    let command = "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted)"
     process.arguments = ["-c", command]
     
     let pipe = Pipe()

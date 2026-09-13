@@ -552,11 +552,11 @@ struct ToolDetailView: View {
         let scriptDir = (resolvedPath as NSString).deletingLastPathComponent
         let scriptName = (resolvedPath as NSString).lastPathComponent
         
-        var cmd = "cd '\(scriptDir)'"
+        var cmd = "cd \(scriptDir.shellQuoted)"
         if tool.requiresSudo || tool.executionMode == .terminal {
-            cmd += " && sudo ./'\(scriptName)'"
+            cmd += " && sudo ./\(scriptName.shellQuoted)"
         } else {
-            cmd += " && ./'\(scriptName)'"
+            cmd += " && ./\(scriptName.shellQuoted)"
         }
         
         if !tool.arguments.isEmpty {
@@ -574,7 +574,7 @@ struct ToolDetailView: View {
         let script = """
         tell application "Terminal"
             activate
-            do script "\(cmd)"
+            do script "\(cmd.appleScriptQuoted)"
         end tell
         """
         

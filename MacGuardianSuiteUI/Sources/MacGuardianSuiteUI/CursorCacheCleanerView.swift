@@ -953,7 +953,10 @@ func cleanNodeModulesForProject(project: CursorProject, reinstall: Bool) -> (suc
                     installCommand = "npm install"
                 }
                 
-                process.arguments = ["-c", "cd '\(project.path)' && \(installCommand)"]
+                // process.currentDirectoryURL above already sets the working
+                // directory, so there's no need to (and no risk in trying to)
+                // shell-quote project.path into a "cd" prefix here.
+                process.arguments = ["-c", installCommand]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe
@@ -997,7 +1000,10 @@ func cleanNodeModulesForProject(project: CursorProject, reinstall: Bool) -> (suc
                 installCommand = "npm install"
             }
             
-            process.arguments = ["-c", "cd '\(project.path)' && \(installCommand)"]
+            // process.currentDirectoryURL above already sets the working
+            // directory, so there's no need to (and no risk in trying to)
+            // shell-quote project.path into a "cd" prefix here.
+            process.arguments = ["-c", installCommand]
             
             let pipe = Pipe()
             process.standardOutput = pipe

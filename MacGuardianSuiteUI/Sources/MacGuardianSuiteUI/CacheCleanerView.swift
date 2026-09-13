@@ -656,7 +656,9 @@ func runBrowserCleanup(args: [String], isPreview: Bool) -> (success: Bool, messa
     
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    process.arguments = ["-c", "cd '\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite' && bash '\(scriptPath)' \(args.joined(separator: " "))"]
+    let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite"
+    let quotedArgs = args.map { $0.shellQuoted }.joined(separator: " ")
+    process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted) \(quotedArgs)"]
     
     let pipe = Pipe()
     process.standardOutput = pipe

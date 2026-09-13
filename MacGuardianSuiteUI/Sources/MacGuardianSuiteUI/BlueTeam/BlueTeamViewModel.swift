@@ -9,7 +9,12 @@ class BlueTeamViewModel: ObservableObject {
     @Published var isLoadingStats = false
     @Published var lastUpdate: Date?
     @Published var errorMessage: String?
-    
+
+    /// Set by the view from WorkspaceState.repositoryPath before refreshing,
+    /// so the auto-refresh timer (which has no view context of its own) can
+    /// keep using the user's configured path instead of a hardcoded guess.
+    var repositoryPath: String = ""
+
     private var refreshTimer: Timer?
     private let autoRefreshInterval: TimeInterval = 30.0 // 30 seconds
     
@@ -41,7 +46,7 @@ class BlueTeamViewModel: ObservableObject {
         isLoadingEvents = true
         errorMessage = nil
         
-        let loadedEvents = await BlueTeamScriptService.shared.runCollector()
+        let loadedEvents = await BlueTeamScriptService.shared.runCollector(repositoryPath: repositoryPath)
         
         // Merge with existing events, avoiding duplicates
         let existingIds = Set(events.map { $0.id })
@@ -62,7 +67,7 @@ class BlueTeamViewModel: ObservableObject {
     func loadStats() async {
         isLoadingStats = true
         
-        let loadedStats = await BlueTeamScriptService.shared.getSystemStats()
+        let loadedStats = await BlueTeamScriptService.shared.getSystemStats(repositoryPath: repositoryPath)
         stats = loadedStats
         
         isLoadingStats = false

@@ -5,27 +5,25 @@ import AppKit
 
 class BlueTeamScriptService {
     static let shared = BlueTeamScriptService()
-    
-    private let repositoryPath: String
-    
-    private init() {
-        // Default to Desktop/MacGuardianProject
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        repositoryPath = "\(homeDir)/Desktop/MacGuardianProject"
-    }
-    
-    func runCollector() async -> [ThreatEvent] {
-        let scriptPath = "\(repositoryPath)/MacGuardianSuite/mac_blueteam.sh"
-        
+
+    private init() {}
+
+    /// `repositoryPath` should come from the user's configured
+    /// WorkspaceState.repositoryPath, not a hardcoded guess at where the
+    /// repo lives.
+    func runCollector(repositoryPath: String) async -> [ThreatEvent] {
+        let scriptDir = "\(repositoryPath)/MacGuardianSuite"
+        let scriptPath = "\(scriptDir)/mac_blueteam.sh"
+
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             return []
         }
-        
+
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                process.arguments = ["-c", "cd '\(self.repositoryPath)/MacGuardianSuite' && ./mac_blueteam.sh --json 2>&1"]
+                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_blueteam.sh --json 2>&1"]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe
@@ -57,18 +55,19 @@ class BlueTeamScriptService {
         }
     }
     
-    func getSystemStats() async -> SystemStats {
-        let scriptPath = "\(repositoryPath)/MacGuardianSuite/performance_monitor.sh"
-        
+    func getSystemStats(repositoryPath: String) async -> SystemStats {
+        let scriptDir = "\(repositoryPath)/MacGuardianSuite"
+        let scriptPath = "\(scriptDir)/performance_monitor.sh"
+
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             return SystemStats()
         }
-        
+
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                process.arguments = ["-c", "cd '\(self.repositoryPath)/MacGuardianSuite' && ./performance_monitor.sh --json 2>&1"]
+                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./performance_monitor.sh --json 2>&1"]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe

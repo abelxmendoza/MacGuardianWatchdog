@@ -15,11 +15,11 @@ struct TerminalCommandView: View {
         let scriptDir = (resolvedPath as NSString).deletingLastPathComponent
         let scriptName = (resolvedPath as NSString).lastPathComponent
         
-        var cmd = "cd '\(scriptDir)'"
+        var cmd = "cd \(scriptDir.shellQuoted)"
         if tool.requiresSudo || tool.executionMode == .terminal {
-            cmd += " && sudo ./'\(scriptName)'"
+            cmd += " && sudo ./\(scriptName.shellQuoted)"
         } else {
-            cmd += " && ./'\(scriptName)'"
+            cmd += " && ./\(scriptName.shellQuoted)"
         }
         
         if !tool.arguments.isEmpty {
@@ -189,11 +189,8 @@ struct TerminalCommandView: View {
     
     private func openTerminal() {
         #if os(macOS)
-        // Escape the command for AppleScript (escape quotes and backslashes)
-        let escapedCommand = terminalCommand
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        
+        let escapedCommand = terminalCommand.appleScriptQuoted
+
         let script = """
         tell application "Terminal"
             activate

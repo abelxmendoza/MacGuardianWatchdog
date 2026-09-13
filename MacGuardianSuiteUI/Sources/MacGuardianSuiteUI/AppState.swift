@@ -98,13 +98,17 @@ struct SuiteTool: Identifiable, Hashable {
     }
 
     func commandLine(using workspace: WorkspaceState) -> [String] {
-        var resolvedPath = workspace.resolve(path: relativePath)
-        if requiresSudo {
-            resolvedPath = "sudo " + resolvedPath
-        }
+        let resolvedPath = workspace.resolve(path: relativePath)
         let command = [workspace.interpreter(for: self), resolvedPath] + arguments
         if requiresSudo {
-            return ["/bin/zsh", "-lc", (["sudo", resolvedPath] + arguments).joined(separator: " ")]
+            // resolvedPath comes from the user-editable repository path, and
+            // arguments can contain arbitrary text - shell-quote every word
+            // before joining so a space or quote in either can't break the
+            // command or be interpreted as shell syntax.
+            let fullCommand = (["sudo", resolvedPath] + arguments)
+                .map { $0.shellQuoted }
+                .joined(separator: " ")
+            return ["/bin/zsh", "-lc", fullCommand]
         }
         return command
     }

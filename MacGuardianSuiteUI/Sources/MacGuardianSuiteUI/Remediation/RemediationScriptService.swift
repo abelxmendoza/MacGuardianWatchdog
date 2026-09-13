@@ -5,26 +5,25 @@ import AppKit
 
 class RemediationScriptService {
     static let shared = RemediationScriptService()
-    
-    private let repositoryPath: String
-    
-    private init() {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        repositoryPath = "\(homeDir)/Desktop/MacGuardianProject"
-    }
-    
-    func previewActions() async -> [RemediationAction] {
-        let scriptPath = "\(repositoryPath)/MacGuardianSuite/mac_remediation.sh"
-        
+
+    private init() {}
+
+    /// `repositoryPath` should come from the user's configured
+    /// WorkspaceState.repositoryPath, not a hardcoded guess at where the
+    /// repo lives.
+    func previewActions(repositoryPath: String) async -> [RemediationAction] {
+        let scriptDir = "\(repositoryPath)/MacGuardianSuite"
+        let scriptPath = "\(scriptDir)/mac_remediation.sh"
+
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             return []
         }
-        
+
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                process.arguments = ["-c", "cd '\(self.repositoryPath)/MacGuardianSuite' && ./mac_remediation.sh --preview-json 2>&1"]
+                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_remediation.sh --preview-json 2>&1"]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe
@@ -57,25 +56,27 @@ class RemediationScriptService {
         }
     }
     
-    func applyFix(action: RemediationAction, dryRun: Bool = false) async -> (success: Bool, message: String) {
-        let scriptPath = "\(repositoryPath)/MacGuardianSuite/mac_remediation.sh"
-        
+    func applyFix(action: RemediationAction, repositoryPath: String, dryRun: Bool = false) async -> (success: Bool, message: String) {
+        let scriptDir = "\(repositoryPath)/MacGuardianSuite"
+        let scriptPath = "\(scriptDir)/mac_remediation.sh"
+
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             return (false, "Remediation script not found")
         }
-        
+
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                
+
                 var args = ["--apply"]
                 if dryRun {
                     args.append("--dry-run")
                 }
                 args.append(action.fixCommand)
-                
-                process.arguments = ["-c", "cd '\(self.repositoryPath)/MacGuardianSuite' && ./mac_remediation.sh \(args.joined(separator: " ")) 2>&1"]
+                let quotedArgs = args.map { $0.shellQuoted }.joined(separator: " ")
+
+                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_remediation.sh \(quotedArgs) 2>&1"]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe

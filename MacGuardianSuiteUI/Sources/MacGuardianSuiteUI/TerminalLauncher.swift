@@ -16,26 +16,25 @@ class TerminalLauncher {
     ///   - copyToClipboard: If true, copies command to clipboard before opening Terminal
     func openTerminal(with command: String, workingDirectory: String? = nil, title: String? = nil, copyToClipboard: Bool = false) {
         let dir = workingDirectory ?? FileManager.default.homeDirectoryForCurrentUser.path
-        let fullCommand = "cd '\(dir)' && \(command)"
-        
+        // `command` is a pre-built shell snippet (its own args are already
+        // quoted by the caller), so it's concatenated as-is; only the
+        // directory - which can come from user-editable repositoryPath - is
+        // quoted here.
+        let fullCommand = "cd \(dir.shellQuoted) && \(command)"
+
         // Copy command to clipboard if requested (do this FIRST)
         if copyToClipboard {
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(fullCommand, forType: .string)
         }
-        
-        // Escape single quotes in directory path and command for AppleScript
-        let escapedDir = dir.replacingOccurrences(of: "'", with: "\\'")
-        let escapedCommand = command.replacingOccurrences(of: "'", with: "\\'")
-        let escapedFullCommand = "cd '\(escapedDir)' && \(escapedCommand)"
-        
+
         let windowTitle = title ?? "MacGuardian"
         let script = """
         tell application "Terminal"
             activate
-            set newTab to do script "\(escapedFullCommand)"
-            set custom title of newTab to "\(windowTitle)"
+            set newTab to do script "\(fullCommand.appleScriptQuoted)"
+            set custom title of newTab to "\(windowTitle.appleScriptQuoted)"
         end tell
         """
         
@@ -53,11 +52,12 @@ class TerminalLauncher {
     
     /// Fallback method that opens Terminal and displays command for easy copy/paste
     private func fallbackOpenTerminal(command: String, title: String) {
+        let innerShellCommand = "echo '🛡️ MacGuardian Command Ready' && echo '' && echo 'Command (already copied to clipboard):' && echo \(command.shellQuoted) && echo '' && echo 'Press Cmd+V to paste, or type it manually above.' && echo ''"
         let script = """
         tell application "Terminal"
             activate
-            do script "echo '🛡️ MacGuardian Command Ready' && echo '' && echo 'Command (already copied to clipboard):' && echo '\(command)' && echo '' && echo 'Press Cmd+V to paste, or type it manually above.' && echo ''"
-            set custom title of front window to "\(title)"
+            do script "\(innerShellCommand.appleScriptQuoted)"
+            set custom title of front window to "\(title.appleScriptQuoted)"
         end tell
         """
         
@@ -277,7 +277,7 @@ class TerminalLauncher {
             echo "🛡️ MacGuardian Security Suite"
             echo "=============================="
             echo ""
-            cd '\(homeDir)/Desktop/MacGuardianProject'
+            cd \("\(homeDir)/Desktop/MacGuardianProject".shellQuoted)
             ./MacGuardianSuite/mac_guardian.sh
             echo ""
             read -p "Press Enter to close..."
@@ -304,7 +304,7 @@ class TerminalLauncher {
                     echo "🛡️ MacGuardian Security Suite"
                     echo "=============================="
                     echo ""
-                    cd '\(dir)'
+                    cd \(dir.shellQuoted)
                     ./mac_guardian.sh
                     echo ""
                     read -p "Press Enter to close..."

@@ -9,11 +9,11 @@ class SecurityAuditViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastRunDate: Date?
     
-    func run() async {
+    func run(repositoryPath: String) async {
         loading = true
         errorMessage = nil
-        
-        let (loadedChecks, loadedSummary) = await SecurityAuditScriptService.shared.runAudit()
+
+        let (loadedChecks, loadedSummary) = await SecurityAuditScriptService.shared.runAudit(repositoryPath: repositoryPath)
         
         checks = loadedChecks
         summary = loadedSummary

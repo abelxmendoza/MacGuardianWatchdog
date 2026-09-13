@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BlueTeamDashboardView: View {
+    @EnvironmentObject private var workspace: WorkspaceState
     @StateObject private var vm = BlueTeamViewModel()
     @State private var selectedEvent: ThreatEvent?
     @State private var showEventDetail = false
@@ -170,6 +171,7 @@ struct BlueTeamDashboardView: View {
         }
         .background(Color.themeBlack)
         .onAppear {
+            vm.repositoryPath = workspace.repositoryPath
             Task {
                 await vm.refresh()
             }
@@ -181,6 +183,7 @@ struct BlueTeamDashboardView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    vm.repositoryPath = workspace.repositoryPath
                     Task {
                         await vm.refresh()
                     }

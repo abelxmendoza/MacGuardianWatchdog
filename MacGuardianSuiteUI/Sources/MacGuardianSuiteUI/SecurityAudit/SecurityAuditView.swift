@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SecurityAuditView: View {
+    @EnvironmentObject private var workspace: WorkspaceState
     @StateObject private var vm = SecurityAuditViewModel()
     @State private var selectedCheck: AuditCheck?
     @State private var showCheckDetail = false
@@ -179,14 +180,14 @@ struct SecurityAuditView: View {
         .background(Color.themeBlack)
         .task {
             if vm.checks.isEmpty {
-                await vm.run()
+                await vm.run(repositoryPath: workspace.repositoryPath)
             }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     Task {
-                        await vm.run()
+                        await vm.run(repositoryPath: workspace.repositoryPath)
                     }
                 } label: {
                     Label("Run Audit", systemImage: "play.fill")
