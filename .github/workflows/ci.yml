@@ -203,9 +203,27 @@ jobs:
         run: |
           echo "## MacGuardian CI Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Syntax Check: Passed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Functional Tests: Passed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ E2E Tests: Passed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Security Tests: Passed" >> $GITHUB_STEP_SUMMARY
+
+          overall=0
+          check() {
+            local name="$1" result="$2"
+            if [ "$result" = "success" ]; then
+              echo "✅ ${name}: Passed" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ ${name}: ${result}" >> "$GITHUB_STEP_SUMMARY"
+              overall=1
+            fi
+          }
+
+          check "Syntax Check" "${{ needs.syntax-check.result }}"
+          check "Functional Tests" "${{ needs.functional-tests.result }}"
+          check "E2E Tests" "${{ needs.e2e-tests.result }}"
+          check "Security Tests" "${{ needs.security-scan.result }}"
+
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All CI checks completed successfully!" >> $GITHUB_STEP_SUMMARY
+          if [ "$overall" -eq 0 ]; then
+            echo "All CI checks completed successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "One or more CI checks failed - see above." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
