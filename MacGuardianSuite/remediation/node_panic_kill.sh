@@ -70,18 +70,26 @@ kill_and_wait() {
 }
 
 main() {
-    local all_pids
-    all_pids=$(ps -Ao pid= 2>/dev/null)
+    # One bulk snapshot instead of a `ps -p $pid` spawn per process on the
+    # whole system just to check whether it's node-family (see the matching
+    # comment in auditors/node_process_auditor.sh, which this mirrors).
+    local -a snap_pids=()
+    local -a snap_ppids=()
+    local -a snap_comms=()
+    while read -r snap_pid snap_ppid snap_comm; do
+        [ -z "$snap_pid" ] && continue
+        snap_pids+=("$snap_pid")
+        snap_ppids+=("$snap_ppid")
+        snap_comms+=("$snap_comm")
+    done < <(ps -Ao pid=,ppid=,comm= 2>/dev/null)
 
     local -a entries=()
     local killed_count=0
 
-    while IFS= read -r raw_pid; do
-        local pid="${raw_pid// /}"
-        [ -z "$pid" ] && continue
-
-        local comm
-        comm=$(ps -p "$pid" -o comm= 2>/dev/null | sed 's/^[ \t]*//;s/[ \t]*$//')
+    local i
+    for i in "${!snap_pids[@]}"; do
+        local pid="${snap_pids[$i]}"
+        local comm="${snap_comms[$i]}"
         [ -z "$comm" ] && continue
 
         local base="${comm##*/}"
@@ -90,8 +98,8 @@ main() {
             *) continue ;;
         esac
 
-        local ppid full_args cwd
-        ppid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' \t')
+        local ppid="${snap_ppids[$i]}"
+        local full_args cwd
         full_args=$(ps -p "$pid" -o args= 2>/dev/null | sed 's/^[ \t]*//;s/[ \t]*$//')
         cwd=$(get_cwd "$pid")
 
@@ -125,7 +133,7 @@ main() {
             "$pid" "${ppid:-0}" "$(json_escape "$comm")" "$args_json" "$(json_escape "$full_args")" "$(json_escape "$cwd")" "$signal_result" "$terminated")")
 
         log_auditor "node_panic_kill" "WARNING" "killed pid=$pid path=$comm signals=$signal_result"
-    done <<< "$all_pids"
+    done
 
     local entries_json="[]"
     if [ "${#entries[@]}" -gt 0 ]; then

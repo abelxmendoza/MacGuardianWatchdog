@@ -276,6 +276,7 @@ struct ProcessKillerView: View {
     }
     
     private func startAutoRefresh() {
+        stopAutoRefresh() // always invalidate any prior timer first - a bare reassignment here would leak it
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
             refreshApps(showLoading: false) // Don't show loading indicator during auto-refresh
         }

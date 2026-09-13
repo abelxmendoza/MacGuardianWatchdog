@@ -52,6 +52,48 @@ json_escape() {
     printf '%s' "$s"
 }
 
+# One-time snapshot of every process's pid/ppid/comm, used by both the main
+# scan and ancestry_chain below. Before this existed, the scan spawned a
+# `ps -p $pid` per process on the WHOLE system just to check whether it was
+# node-family, then ancestry_chain spawned two more `ps` calls per ancestry
+# level for every match (up to MAX_ANCESTRY_DEPTH deep). On a system with a
+# few hundred processes that's several hundred extra fork+execs per run;
+# with the snapshot it's exactly one `ps` call, full stop. Parallel indexed
+# arrays (not associative) because this needs to run under macOS's stock
+# bash 3.2, which has no `declare -A`.
+PS_PIDS=()
+PS_PPIDS=()
+PS_COMMS=()
+
+load_process_snapshot() {
+    # `read -r pid ppid comm` is safe even though comm can rarely contain a
+    # space (e.g. "/Applications/My App.app/..."): pid/ppid are always
+    # numeric with no embedded space, so they consume exactly the first two
+    # words, and `comm` - the last named variable - absorbs everything after
+    # them verbatim, spaces included (bash `read` never truncates or
+    # re-splits the final catch-all field).
+    while read -r pid ppid comm; do
+        [ -z "$pid" ] && continue
+        PS_PIDS+=("$pid")
+        PS_PPIDS+=("$ppid")
+        PS_COMMS+=("$comm")
+    done < <(ps -Ao pid=,ppid=,comm= 2>/dev/null)
+}
+
+# In-memory lookup against the snapshot arrays - no subprocess spawned.
+# Echoes "ppid|comm" on a match, prints nothing and returns 1 otherwise.
+snapshot_lookup() {
+    local target="$1"
+    local i
+    for i in "${!PS_PIDS[@]}"; do
+        if [ "${PS_PIDS[$i]}" = "$target" ]; then
+            echo "${PS_PPIDS[$i]}|${PS_COMMS[$i]}"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Resolve the parent chain of a pid up to launchd (pid 1) or MAX_ANCESTRY_DEPTH
 ancestry_chain() {
     local pid="$1"
@@ -59,11 +101,13 @@ ancestry_chain() {
     local depth=0
 
     while [ -n "$pid" ] && [ "$pid" != "0" ] && [ "$depth" -lt "$MAX_ANCESTRY_DEPTH" ]; do
-        local comm
-        comm=$(ps -p "$pid" -o comm= 2>/dev/null | sed 's/^[ \t]*//;s/[ \t]*$//')
-        if [ -z "$comm" ]; then
+        local lookup
+        lookup=$(snapshot_lookup "$pid")
+        if [ -z "$lookup" ]; then
             break
         fi
+        local ppid="${lookup%%|*}"
+        local comm="${lookup#*|}"
 
         local base="${comm##*/}"
         if [ -n "$chain" ]; then
@@ -76,8 +120,6 @@ ancestry_chain() {
             break
         fi
 
-        local ppid
-        ppid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' \t')
         if [ -z "$ppid" ] || [ "$ppid" = "$pid" ]; then
             break
         fi
@@ -173,15 +215,12 @@ scan_running_processes() {
     echo "== Running Node-family processes =="
     echo ""
 
-    local all_pids
-    all_pids=$(ps -Ao pid= 2>/dev/null)
+    load_process_snapshot
 
-    while IFS= read -r raw_pid; do
-        local pid="${raw_pid// /}"
-        [ -z "$pid" ] && continue
-
-        local comm
-        comm=$(ps -p "$pid" -o comm= 2>/dev/null | sed 's/^[ \t]*//;s/[ \t]*$//')
+    local i
+    for i in "${!PS_PIDS[@]}"; do
+        local pid="${PS_PIDS[$i]}"
+        local comm="${PS_COMMS[$i]}"
         [ -z "$comm" ] && continue
 
         local base="${comm##*/}"
@@ -192,8 +231,11 @@ scan_running_processes() {
 
         total=$((total + 1))
 
-        local ppid args chain sig authority risk reasons severity
-        ppid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' \t')
+        # ppid comes straight from the snapshot; args is the one thing the
+        # snapshot doesn't carry, but it's now looked up only for the
+        # handful of matched processes, not every process on the system.
+        local ppid="${PS_PPIDS[$i]}"
+        local args chain sig authority risk reasons severity
         args=$(ps -p "$pid" -o args= 2>/dev/null | sed 's/^[ \t]*//;s/[ \t]*$//')
         chain=$(ancestry_chain "${ppid:-0}")
 
@@ -239,7 +281,7 @@ scan_running_processes() {
                 "$pid" "$(json_escape "$comm")" "$(json_escape "$chain")" "$sig" "$(json_escape "$authority")" "$(json_escape "$reasons")")
             write_event "process_anomaly" "$severity" "node_process_auditor" "$context_json"
         fi
-    done <<< "$all_pids"
+    done
 
     local findings_json="[]"
     if [ "${#entries[@]}" -gt 0 ]; then

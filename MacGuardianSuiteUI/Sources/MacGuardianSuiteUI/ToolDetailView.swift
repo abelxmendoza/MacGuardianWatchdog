@@ -10,7 +10,11 @@ struct ToolDetailView: View {
     @State private var updateTimer: Timer?
     @State private var currentTime = Date()
     
-    // Timer to update running status
+    // Drives the running-duration display (LiveTimer only renders MM:SS,
+    // so 1s resolution is plenty). This used to be duplicated by a second,
+    // 0.1s timer inside statusHeader's onAppear that never invalidated this
+    // one first - every run leaked an orphaned timer that kept firing in
+    // the background indefinitely. There is now exactly one timer owner.
     private func startStatusTimer() {
         updateTimer?.invalidate()
         updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
@@ -397,17 +401,6 @@ struct ToolDetailView: View {
                         .foregroundColor(.themeTextSecondary)
                 }
             }
-        }
-        .onAppear {
-            // Start update timer that runs continuously
-            updateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-                currentTime = Date()
-            }
-            RunLoop.main.add(updateTimer!, forMode: .common)
-            }
-        .onDisappear {
-            updateTimer?.invalidate()
-            updateTimer = nil
         }
     }
     

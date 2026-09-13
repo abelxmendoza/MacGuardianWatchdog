@@ -211,7 +211,8 @@ class WebSocketClient: ObservableObject {
         
         reconnectAttempts += 1
         let delay = min(Double(reconnectAttempts) * 2.0, 30.0) // Exponential backoff, max 30s
-        
+
+        reconnectTimer?.invalidate() // a second error before the prior backoff fires would otherwise leak it
         reconnectTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
             self?.connect()
         }
