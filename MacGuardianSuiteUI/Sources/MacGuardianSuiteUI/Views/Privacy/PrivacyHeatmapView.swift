@@ -71,9 +71,18 @@ struct PrivacyHeatmapView: View {
                     .disabled(isLoading)
                 }
                 .padding()
-                
+
+                FeatureInfoCard(
+                    icon: "hand.raised.fill",
+                    title: "Privacy Permissions",
+                    whatItDoes: "Shows every app that has been granted Full Disk Access, Screen Recording, Camera, Microphone, Input Monitoring, or Accessibility - the sensitive macOS permissions tracked by TCC (Apple's permission-consent system) - and flags newly-granted ones.",
+                    whyItMatters: "These are the permissions malware actually wants: Screen Recording can capture your passwords as you type them, Input Monitoring can log every keystroke, and Full Disk Access can read anything on the machine. An app you don't recognize holding one of these is worth investigating immediately.",
+                    checks: ["Apps with Full Disk Access", "Apps that can record your screen or use the camera/microphone", "Apps with Input Monitoring or Accessibility access", "Permissions granted recently"]
+                )
+                .padding(.horizontal)
+
                 Divider()
-                
+
                 // Real-time Connection Status
                 HStack {
                     ConnectionStatusIndicator(

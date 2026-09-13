@@ -61,6 +61,10 @@ struct SuiteTool: Identifiable, Hashable {
     let id = UUID()
     let name: String
     let description: String
+    /// Plain-language reason a non-expert would want to run this - shown in
+    /// the tool detail view above the Run button so people understand what
+    /// they're about to do before they do it.
+    let whyItMatters: String
     let relativePath: String
     let kind: Kind
     let arguments: [String]
@@ -72,6 +76,7 @@ struct SuiteTool: Identifiable, Hashable {
     init(
         name: String,
         description: String,
+        whyItMatters: String = "",
         relativePath: String,
         kind: Kind = .shell,
         arguments: [String] = [],
@@ -82,6 +87,7 @@ struct SuiteTool: Identifiable, Hashable {
     ) {
         self.name = name
         self.description = description
+        self.whyItMatters = whyItMatters
         self.relativePath = relativePath
         self.kind = kind
         self.arguments = arguments
@@ -816,6 +822,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Process Killer",
                         description: "Safely kill processes and force quit applications that won't close normally. Perfect for Cursor, Firefox, Slack, Discord, and other stubborn apps.",
+                        whyItMatters: "A frozen app can lock files, block a shutdown, or quietly burn CPU and battery in the background. This ends it without a full restart.",
                         relativePath: "", // This is a UI-only tool
                         kind: .shell,
                         safetyLevel: .destructive,
@@ -825,6 +832,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Cache Cleaner",
                         description: "Safely clear browser caches (Safari, Chrome, Firefox, Edge) and system caches to free up disk space. Preview before cleaning.",
+                        whyItMatters: "Caches grow silently and can eat tens of gigabytes over months. This frees the space and can fix apps behaving oddly, without touching your bookmarks or saved logins.",
                         relativePath: "", // This is a UI-only tool
                         kind: .shell,
                         safetyLevel: .caution,
@@ -834,6 +842,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Cursor Cache Cleaner",
                         description: "Clear Cursor editor cache for your projects. Fixes cache issues and frees up disk space. Scans for projects automatically.",
+                        whyItMatters: "Per-project caches can balloon and cause laggy indexing or stale search results in Cursor. This is a safe first fix before reinstalling anything.",
                         relativePath: "", // This is a UI-only tool
                         kind: .shell,
                         safetyLevel: .safe,
@@ -843,6 +852,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Fix App Icons",
                         description: "Fix macOS app icons that aren't displaying correctly. Clears icon cache and restarts Dock.",
+                        whyItMatters: "A stale icon cache is cosmetic, not a security issue - but it's the most common reason icons look wrong in Finder or the Dock after an update or reinstall.",
                         relativePath: "", // This is a UI-only tool
                         kind: .shell,
                         safetyLevel: .safe,
@@ -858,6 +868,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Run mac_suite.sh",
                         description: "Launch the interactive command-line menu for the entire suite. ⚠️ This is an interactive menu - must be run from Terminal.",
+                        whyItMatters: "This is the front door to every tool below. Use it for a guided, menu-driven session instead of remembering individual script names.",
                         relativePath: "mac_suite.sh",
                         arguments: [],
                         requiresSudo: false,
@@ -866,6 +877,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Run mac_guardian.sh",
                         description: "Execute the cleanup and security hardening workflow. ⚠️ Terminal recommended for full functionality (rootkit scan requires sudo).",
+                        whyItMatters: "The closest thing to a full checkup: it patches known-vulnerable software, scans for malware and rootkits, and confirms macOS's built-in protections (Firewall, Gatekeeper, SIP, FileVault, Time Machine) are actually turned on - skipping it means any of those could be silently off.",
                         relativePath: "MacGuardianSuite/mac_guardian.sh",
                         safetyLevel: .caution,
                         destructiveOperations: ["Cleans temporary files", "Updates system packages", "May require sudo for some operations"],
@@ -874,30 +886,35 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Run mac_watchdog.sh",
                         description: "Start file integrity monitoring and Tripwire-style checks.",
+                        whyItMatters: "Unauthorized changes often show up first as an unexpected file edit - a tampered binary, a modified login item, a new file somewhere that should never change. This catches that by comparing today's files against a known-good baseline.",
                         relativePath: "MacGuardianSuite/mac_watchdog.sh",
                         safetyLevel: .safe
                     ),
                     SuiteTool(
                         name: "Run mac_blueteam.sh",
                         description: "Advanced detection of suspicious processes, network connections, and anomalies.",
+                        whyItMatters: "Real intrusions rarely announce themselves - they look like an odd process quietly talking to an unfamiliar server. This looks past the process list at behavior: what's running, what it's connecting to, and whether that pattern matches known attack techniques.",
                         relativePath: "MacGuardianSuite/mac_blueteam.sh",
                         safetyLevel: .safe
                     ),
                     SuiteTool(
                         name: "Run mac_ai.sh",
                         description: "Machine learning-driven security analytics and behavioral insights.",
+                        whyItMatters: "Signature-based tools only catch threats someone has already seen before. This flags statistically unusual behavior instead, so it can notice something suspicious even without a matching malware signature.",
                         relativePath: "MacGuardianSuite/mac_ai.sh",
                         safetyLevel: .safe
                     ),
                     SuiteTool(
                         name: "Run mac_security_audit.sh",
                         description: "Comprehensive security posture assessment for macOS.",
+                        whyItMatters: "Gives you a single pass/fail score across the settings that actually matter (FileVault, SIP, Gatekeeper, certificates, launch items) instead of checking each one by hand in System Settings.",
                         relativePath: "MacGuardianSuite/mac_security_audit.sh",
                         safetyLevel: .safe
                     ),
                     SuiteTool(
                         name: "Run mac_remediation.sh",
                         description: "Automated remediation workflows with dry-run safety checks.",
+                        whyItMatters: "Finding a problem is only half the job - this is what actually fixes it. It defaults to a dry run so you see exactly what would change before anything is deleted, quarantined, or modified.",
                         relativePath: "MacGuardianSuite/mac_remediation.sh",
                         safetyLevel: .destructive,
                         destructiveOperations: [
@@ -917,22 +934,26 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Threat Intel Feeds",
                         description: "Fetch and correlate the latest threat intelligence feeds.",
+                        whyItMatters: "Keeps your local blocklist current with known-bad IPs, domains, and file hashes from public feeds. Without fresh data here, IOC matching everywhere else in the suite is checking against stale information.",
                         relativePath: "MacGuardianSuite/threat_intel_feeds.sh"
                     ),
                     SuiteTool(
                         name: "Scheduled Reports",
                         description: "Generate scheduled HTML and text reports.",
+                        whyItMatters: "Security tools you have to remember to run are security tools you'll eventually forget. This turns scans into a recurring habit by emailing or saving a summary automatically.",
                         relativePath: "MacGuardianSuite/scheduled_reports.sh"
                     ),
                     SuiteTool(
                         name: "Advanced Alerting",
                         description: "Manage custom alert rules and severity-based notifications.",
+                        whyItMatters: "Not every event deserves an interruption. This lets you define which severities and event types actually notify you, so a real alert doesn't get lost in noise you've learned to tune out.",
                         relativePath: "MacGuardianSuite/advanced_alerting.sh",
                         arguments: ["process"]
                     ),
                     SuiteTool(
                         name: "STIX Exporter",
                         description: "Export collected indicators of compromise to STIX format.",
+                        whyItMatters: "If you ever need to share findings with another tool, a SOC, or a threat-intel platform, STIX is the format they expect - this saves you from hand-converting your data.",
                         relativePath: "MacGuardianSuite/stix_exporter_wrapper.sh"
                     )
                 ]
@@ -944,27 +965,32 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Performance Monitor",
                         description: "Track execution times and identify suite bottlenecks.",
+                        whyItMatters: "A scan that quietly eats all your CPU is a scan people disable out of frustration. This shows what's slow before that becomes a reason to stop running the suite.",
                         relativePath: "MacGuardianSuite/performance_monitor.sh"
                     ),
                     SuiteTool(
                         name: "Error Tracker",
                         description: "Review and triage recorded errors from recent runs.",
+                        whyItMatters: "A scan that fails silently gives you false confidence that everything's fine. This surfaces what actually broke so a silent failure doesn't get mistaken for a clean result.",
                         relativePath: "MacGuardianSuite/error_tracker.sh"
                     ),
                     SuiteTool(
                         name: "View Errors",
                         description: "Quickly open the generated error logs.",
+                        whyItMatters: "The fastest way to see what an Error Tracker entry actually said, without hunting through log files by hand.",
                         relativePath: "MacGuardianSuite/view_errors.sh"
                     ),
                     SuiteTool(
                         name: "Module Manager",
                         description: "Enable, disable, and configure suite modules.",
+                        whyItMatters: "Not every environment needs every check. This lets you turn off modules that don't apply to your setup instead of learning to ignore their failures forever.",
                         relativePath: "MacGuardianSuite/module_manager.py",
                         kind: .python
                     ),
                     SuiteTool(
                         name: "Browser Cleanup",
                         description: "Clean browser caches, cookies, history, and autofill data for Safari, Chrome, Firefox, and Edge.",
+                        whyItMatters: "Browsers accumulate cookies and autofill data that can be used to track you across sites, or - on a shared or borrowed Mac - leak your browsing history and saved logins to the next person who uses it.",
                         relativePath: "MacGuardianSuite/browser_cleanup.sh",
                         safetyLevel: .caution,
                         destructiveOperations: ["Cleans browser cache files", "May delete cookies and browsing history if --all flag is used"]
@@ -972,6 +998,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "App Security Check",
                         description: "Verify integrity and security of MacGuardian Suite files. Checks file checksums, permissions, and detects tampering.",
+                        whyItMatters: "Verifies MacGuardian's own scripts haven't been tampered with. A security tool that's been quietly modified to always report \"all clear\" is worse than no tool at all.",
                         relativePath: "MacGuardianSuite/app_security.sh",
                         arguments: ["--all"],
                         safetyLevel: .safe
@@ -979,6 +1006,7 @@ extension SuiteCategory {
                     SuiteTool(
                         name: "Fix App Icons",
                         description: "Clear macOS icon cache and fix app icons. Use this if app icons aren't displaying correctly in Finder or Dock.",
+                        whyItMatters: "A stale icon cache is cosmetic, not a security issue - but it's the most common reason icons look wrong in Finder or the Dock after an update or reinstall.",
                         relativePath: "MacGuardianSuite/fix_app_icons.sh",
                         safetyLevel: .safe
                     )

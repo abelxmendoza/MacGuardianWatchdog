@@ -36,9 +36,18 @@ struct UserAccountSecurityView: View {
                     .disabled(isLoading)
                 }
                 .padding()
-                
+
+                FeatureInfoCard(
+                    icon: "person.2.fill",
+                    title: "User Accounts",
+                    whatItDoes: "Lists every account on this Mac, who has admin rights, whether guest/hidden accounts are enabled, and flags accounts created or elevated to admin recently.",
+                    whyItMatters: "An extra admin account is one of the quietest ways to maintain persistent access to a machine - it doesn't trigger antivirus, doesn't look like malware, and works even after a full reinstall of any app.",
+                    checks: ["Every local user account and its privilege level", "Guest account and hidden account status", "Recently created or newly-elevated admin accounts", "Sudoers configuration"]
+                )
+                .padding(.horizontal)
+
                 Divider()
-                
+
                 // Real-time Connection Status
                 HStack {
                     ConnectionStatusIndicator(

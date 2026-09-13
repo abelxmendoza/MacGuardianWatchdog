@@ -49,6 +49,15 @@ struct BlueTeamDashboardView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
+                    FeatureInfoCard(
+                        icon: "shield.lefthalf.filled",
+                        title: "Blue Team Dashboard",
+                        whatItDoes: "Runs behavioral threat detection: process anomalies, suspicious network connections, filesystem anomalies, and pattern-based threat hunting, then scores each finding by severity.",
+                        whyItMatters: "\"Blue team\" means playing defense the way an attacker plays offense - looking for the subtle signs of compromise (an odd parent-child process relationship, a connection to a C2-style server) rather than waiting for antivirus to recognize a known signature.",
+                        checks: ["Running processes and their relationships", "Outbound network connections", "Filesystem anomalies", "Behavioral patterns matched against known attack techniques"]
+                    )
+                    .padding(.horizontal)
+
                     // System Metrics
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {

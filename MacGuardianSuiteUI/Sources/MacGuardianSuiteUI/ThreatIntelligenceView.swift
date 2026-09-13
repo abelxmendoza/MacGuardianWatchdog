@@ -61,7 +61,17 @@ struct ThreatIntelligenceView: View {
             
             Divider()
                 .background(Color.themePurpleDark)
-            
+
+            FeatureInfoCard(
+                icon: "shield.lefthalf.filled",
+                title: "Threat Intelligence",
+                whatItDoes: "Lets you check any IP, domain, file hash, or URL (an \"IOC\" - Indicator of Compromise) against public threat feeds, and automatically cross-references what those feeds flag against activity elsewhere on this Mac.",
+                whyItMatters: "Recognizing a bad actor by name only works if you know their names. This keeps that list current from public sources (Abuse.ch, URLhaus) instead of relying on a list that goes stale the day it ships.",
+                checks: ["IPs, domains, file hashes, and URLs you look up manually", "Threat feed freshness and IOC counts", "Matches between feed data and events seen elsewhere in the suite"]
+            )
+            .padding(.horizontal)
+            .padding(.top, 12)
+
             // Tab selector
             HStack(spacing: 0) {
                 ForEach(ThreatTab.allCases, id: \.self) { tab in

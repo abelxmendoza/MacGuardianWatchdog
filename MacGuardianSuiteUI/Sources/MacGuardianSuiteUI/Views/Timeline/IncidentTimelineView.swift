@@ -80,9 +80,18 @@ struct IncidentTimelineView: View {
                 .disabled(viewModel.isLoading)
             }
             .padding()
-            
+
+            FeatureInfoCard(
+                icon: "clock.fill",
+                title: "Incident Timeline",
+                whatItDoes: "Merges every event from every monitor - process, network, filesystem, and intrusion-detection - into one chronological feed, so you can see what happened, in what order, across the whole system.",
+                whyItMatters: "A real incident is rarely one isolated event; it's a sequence (a file changed, then a process spawned, then it phoned home). Looking at each monitor's log in isolation hides that sequence - the timeline reconstructs it.",
+                checks: ["File integrity changes", "Process anomalies", "Network connections", "Intrusion-detection (IDS) alerts, ranked by severity"]
+            )
+            .padding(.horizontal)
+
             Divider()
-            
+
             // Filter Picker
             Picker("Filter", selection: $selectedFilter) {
                 ForEach(TimelineFilter.allCases, id: \.self) { filter in

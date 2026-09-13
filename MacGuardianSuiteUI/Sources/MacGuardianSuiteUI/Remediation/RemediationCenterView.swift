@@ -40,6 +40,15 @@ struct RemediationCenterView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
+                    FeatureInfoCard(
+                        icon: "wrench.and.screwdriver.fill",
+                        title: "Remediation Center",
+                        whatItDoes: "Turns findings from the other dashboards into concrete fixes - quarantining suspicious files, removing unauthorized launch items, correcting file permissions - with a dry-run preview before anything actually changes.",
+                        whyItMatters: "Finding a problem doesn't fix it. This is the difference between a report you read and a system that's actually more secure afterward - and the dry-run default means you see exactly what would happen before committing to it.",
+                        checks: ["Suspicious files (quarantined, not deleted, so you can recover them)", "Unauthorized launch agents/daemons", "Incorrect file permissions", "Processes flagged as anomalous elsewhere in the suite"]
+                    )
+                    .padding(.horizontal)
+
                     // Warning Banner
                     if !vm.actions.isEmpty {
                         HStack(spacing: 12) {

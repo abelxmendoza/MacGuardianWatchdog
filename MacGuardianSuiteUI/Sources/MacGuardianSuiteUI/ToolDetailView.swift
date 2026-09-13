@@ -135,6 +135,17 @@ struct ToolDetailView: View {
                 }
             }
 
+            if !tool.whyItMatters.isEmpty {
+                FeatureInfoCard(
+                    icon: "info.circle",
+                    title: tool.name,
+                    whatItDoes: tool.description,
+                    whyItMatters: tool.whyItMatters,
+                    checks: tool.destructiveOperations,
+                    checksLabel: tool.safetyLevel == .safe ? "What it looks at" : "What it can do"
+                )
+            }
+
             // Safety warning badge
             if tool.safetyLevel != .safe {
                 HStack(spacing: 8) {

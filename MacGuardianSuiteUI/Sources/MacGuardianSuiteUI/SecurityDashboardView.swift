@@ -22,7 +22,16 @@ struct SecurityDashboardView: View {
                     Spacer()
                 }
                 .padding(.horizontal)
-                
+
+                FeatureInfoCard(
+                    icon: "checkmark.shield.fill",
+                    title: "Security Dashboard",
+                    whatItDoes: "Checks the integrity of MacGuardian's own critical files - confirms they match their expected checksums and haven't been silently modified.",
+                    whyItMatters: "A monitoring tool is a high-value target: if malware can quietly patch the tool that's supposed to detect it, every other check in this app becomes untrustworthy. This is the app checking on itself.",
+                    checks: ["Checksums of MacGuardian's own scripts and binaries", "File permissions on critical app files"]
+                )
+                .padding(.horizontal)
+
                 // Integrity Verification
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {

@@ -42,9 +42,18 @@ struct SSHSecurityView: View {
                     .disabled(isLoading)
                 }
                 .padding()
-                
+
+                FeatureInfoCard(
+                    icon: "key.fill",
+                    title: "SSH Security",
+                    whatItDoes: "Audits your SSH setup: which keys exist, whether any are weak or passphrase-less, who's allowed to log in remotely, and whether risky server settings (like password auth or root login) are enabled.",
+                    whyItMatters: "SSH is the most common way a Mac gets remotely controlled once an attacker has any foothold - a leftover key, a weak passphrase, or root login left on can turn a minor compromise into full remote access.",
+                    checks: ["Keys in ~/.ssh and their strength", "authorized_keys entries (who can log in as you)", "sshd_config settings like PermitRootLogin and PasswordAuthentication", "Recent SSH connection attempts"]
+                )
+                .padding(.horizontal)
+
                 Divider()
-                
+
                 // Real-time Connection Status
                 ConnectionStatusIndicator(
                     isConnected: LiveUpdateService.shared.isConnected,

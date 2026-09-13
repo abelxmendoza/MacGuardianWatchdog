@@ -61,7 +61,17 @@ struct OmegaGuardianView: View {
             
             Divider()
                 .background(Color.themePurpleDark)
-            
+
+            FeatureInfoCard(
+                icon: "shield.lefthalf.filled",
+                title: "Omega Guardian",
+                whatItDoes: "Correlates events from every other monitor against a rule set (throttled and de-duplicated) and turns the ones that matter into a single incident feed, instead of a raw stream of every event the suite sees.",
+                whyItMatters: "A monitor that alerts on everything trains you to ignore it. This exists specifically to be \"non-spam, high-signal\" - fewer alerts, but ones worth actually reading, with rules you can tune in the Rules tab.",
+                checks: ["Events matched against configurable alert rules", "Severity and throttling to avoid duplicate/repeat alerts", "Acknowledged vs. unresolved incidents"]
+            )
+            .padding(.horizontal)
+            .padding(.top, 12)
+
             // Tab selector
             HStack(spacing: 0) {
                 ForEach(AlertTab.allCases, id: \.self) { tab in

@@ -63,7 +63,16 @@ struct RealTimeDashboardView: View {
                     }
                 }
                 .padding(.horizontal)
-                
+
+                FeatureInfoCard(
+                    icon: "dot.radiowaves.left.and.right",
+                    title: "Real-Time Threat Monitor",
+                    whatItDoes: "Streams events the moment the background monitoring daemon sees them - a file change, a new process, a network connection - over a local WebSocket, instead of waiting for a scheduled scan.",
+                    whyItMatters: "Some attacks unfold in seconds. A daily scan can miss a process that started and quit in that window; this catches it as it happens. \"Disconnected\" here means the daemon isn't running, so nothing is being watched live - the other dashboards fall back to their own on-demand scans.",
+                    checks: ["File integrity changes as they happen", "New or terminated processes", "New network connections", "Whether the monitoring daemon is currently running"]
+                )
+                .padding(.horizontal)
+
                 // Stats cards
                 HStack(spacing: 16) {
                     StatCard(

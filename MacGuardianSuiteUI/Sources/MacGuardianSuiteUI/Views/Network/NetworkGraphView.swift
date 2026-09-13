@@ -47,9 +47,18 @@ struct NetworkGraphView: View {
                     .disabled(isLoading)
                 }
                 .padding()
-                
+
+                FeatureInfoCard(
+                    icon: "network",
+                    title: "Network Flow",
+                    whatItDoes: "Draws a live map of which process is talking to which port and IP address, so you can see the actual chain: app → port → destination.",
+                    whyItMatters: "Malware often hides in plain sight as a process with a boring name, but its network behavior gives it away - talking to an unfamiliar IP on an unusual port, or a process that should never touch the network doing so anyway. Seeing the graph makes that pattern obvious in a way a text log doesn't.",
+                    checks: ["Every process with an active network connection", "Destination IPs and ports", "Connections to known-suspicious hosts (cross-checked against threat intel)"]
+                )
+                .padding(.horizontal)
+
                 Divider()
-                
+
                 // Real-time Connection Status
                 HStack {
                     ConnectionStatusIndicator(
