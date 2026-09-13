@@ -12,8 +12,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source core utilities
-source "$SUITE_DIR/core/utils.sh" 2>/dev/null || true
-source "$SUITE_DIR/core/config.sh" 2>/dev/null || true
+source "$SUITE_DIR/utils.sh" 2>/dev/null || true
+source "$SUITE_DIR/config.sh" 2>/dev/null || true
 
 # Configuration directories
 EVENT_DIR="$HOME/.macguardian/events"

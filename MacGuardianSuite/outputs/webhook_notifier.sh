@@ -10,7 +10,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-source "$SUITE_DIR/core/utils.sh" 2>/dev/null || true
+source "$SUITE_DIR/utils.sh" 2>/dev/null || true
 
 WEBHOOK_URL="${WEBHOOK_URL:-}"
 WEBHOOK_TYPE="${WEBHOOK_TYPE:-generic}"  # slack, discord, teams, generic
