@@ -10,22 +10,19 @@ extension Notification.Name {
 class PanicKillService {
     static let shared = PanicKillService()
 
-    private let repositoryPath: String
     private let sessionsDir: URL
 
     private init() {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        repositoryPath = "\(homeDir)/Desktop/MacGuardianProject"
         sessionsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".macguardian")
             .appendingPathComponent("panic_sessions")
     }
 
     /// Runs the panic-kill script: terminates every live node/npm/npx/corepack
-    /// process on the machine and returns what was killed.
-    func runPanicKill() async -> Result<PanicKillSession, PanicKillError> {
-        let scriptPath = "\(repositoryPath)/MacGuardianSuite/remediation/node_panic_kill.sh"
-
+    /// process on the machine and returns what was killed. `scriptPath` should
+    /// be resolved from the user's configured repository path (WorkspaceState.resolve),
+    /// the same way every other tool in the app locates its scripts.
+    func runPanicKill(scriptPath: String) async -> Result<PanicKillSession, PanicKillError> {
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             return .failure(.scriptNotFound)
         }

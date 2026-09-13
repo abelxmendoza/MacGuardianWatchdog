@@ -85,7 +85,8 @@ private struct MenuBarPanicMenu: View {
             guard !isKilling else { return }
             isKilling = true
             Task {
-                _ = await PanicKillService.shared.runPanicKill()
+                let scriptPath = workspace.resolve(path: "MacGuardianSuite/remediation/node_panic_kill.sh")
+                _ = await PanicKillService.shared.runPanicKill(scriptPath: scriptPath)
                 isKilling = false
             }
         } label: {

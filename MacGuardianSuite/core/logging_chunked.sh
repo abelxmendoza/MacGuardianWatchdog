@@ -54,7 +54,7 @@ flush_chunk() {
     
     if [ ! -f "$buffer_file" ] || [ ! -s "$buffer_file" ]; then
         return
-    }
+    fi
     
     # Determine target log file
     local log_file

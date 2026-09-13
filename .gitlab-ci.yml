@@ -17,15 +17,20 @@ syntax-check:
     - macos
   script:
     - echo "Validating bash script syntax..."
-    - find MacGuardianSuite -name "*.sh" -type f | while read -r script; do
+    - |
+      while read -r script; do
+        # .bats files use bats' @test syntax, not plain bash - bash -n
+        # always misreads them as broken. Skip anything with a bats shebang.
+        head -1 "$script" | grep -q 'env bats' && continue
         echo "Checking: $script"
         bash -n "$script" || exit 1
-      done
+      done < <(find MacGuardianSuite -name "*.sh" -type f)
     - echo "Validating Python script syntax..."
-    - find MacGuardianSuite -name "*.py" -type f | while read -r script; do
+    - |
+      while read -r script; do
         echo "Checking: $script"
         python3 -m py_compile "$script" || exit 1
-      done
+      done < <(find MacGuardianSuite -name "*.py" -type f)
     - echo "✅ All scripts passed syntax validation"
   only:
     - merge_requests

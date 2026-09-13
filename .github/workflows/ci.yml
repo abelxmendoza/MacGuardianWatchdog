@@ -19,19 +19,22 @@ jobs:
       - name: Validate Bash scripts
         run: |
           echo "Validating bash script syntax..."
-          find MacGuardianSuite -name "*.sh" -type f | while read -r script; do
+          while read -r script; do
+            # .bats files use bats' @test syntax, not plain bash - bash -n
+            # always misreads them as broken. Skip anything with a bats shebang.
+            head -1 "$script" | grep -q 'env bats' && continue
             echo "Checking: $script"
             bash -n "$script" || exit 1
-          done
+          done < <(find MacGuardianSuite -name "*.sh" -type f)
           echo "✅ All bash scripts passed syntax validation"
-      
+
       - name: Validate Python scripts
         run: |
           echo "Validating Python script syntax..."
-          find MacGuardianSuite -name "*.py" -type f | while read -r script; do
+          while read -r script; do
             echo "Checking: $script"
             python3 -m py_compile "$script" || exit 1
-          done
+          done < <(find MacGuardianSuite -name "*.py" -type f)
           echo "✅ All Python scripts passed syntax validation"
 
   unit-tests:

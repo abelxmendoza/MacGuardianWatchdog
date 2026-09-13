@@ -65,7 +65,7 @@ calculate_interval() {
     if [ "$current_time" -lt "$THROTTLE_UNTIL" ]; then
         echo "$COOLDOWN_RATE"
         return
-    }
+    fi
     
     # Check for cooldown trigger
     local recent_events=$(awk -v cutoff=$((current_time - COOLDOWN_WINDOW)) '$1 > cutoff {count++} END {print count+0}' "$ACTIVITY_LOG" 2>/dev/null || echo "0")

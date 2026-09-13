@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PanicKillerView: View {
+    @EnvironmentObject var workspace: WorkspaceState
     @State private var isKilling = false
     @State private var showConfirmation = false
     @State private var sessions: [PanicKillSession] = []
@@ -246,7 +247,8 @@ struct PanicKillerView: View {
         // Result display is handled uniformly by the .panicKillCompleted
         // notification below, so this stays in sync with menu-bar-triggered
         // kills too.
-        _ = await PanicKillService.shared.runPanicKill()
+        let scriptPath = workspace.resolve(path: "MacGuardianSuite/remediation/node_panic_kill.sh")
+        _ = await PanicKillService.shared.runPanicKill(scriptPath: scriptPath)
         isKilling = false
     }
 
