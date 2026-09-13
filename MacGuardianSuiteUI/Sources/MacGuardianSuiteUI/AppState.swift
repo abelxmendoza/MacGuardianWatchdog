@@ -310,7 +310,8 @@ enum AppView: String, CaseIterable {
     case privacyHeatmap = "Privacy"
     case networkGraph = "Network Graph"
     case incidentTimeline = "Timeline"
-    
+    case panicKiller = "Panic Kill"
+
     var icon: String {
         switch self {
         case .threatIntelligence:
@@ -331,6 +332,7 @@ enum AppView: String, CaseIterable {
         case .privacyHeatmap: return "hand.raised.fill"
         case .networkGraph: return "network"
         case .incidentTimeline: return "clock.fill"
+        case .panicKiller: return "bolt.trianglebadge.exclamationmark.fill"
         }
     }
 }

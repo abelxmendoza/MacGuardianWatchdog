@@ -172,6 +172,8 @@ struct ContentView: View {
                     NetworkGraphView()
                 case .incidentTimeline:
                     IncidentTimelineView()
+                case .panicKiller:
+                    PanicKillerView()
                 }
         }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -25,7 +25,10 @@ write_event() {
     local event_type="$1"
     local severity="$2"
     local source_module="$3"
-    local context_json="${4:-{}}"
+    local context_json="${4:-}"
+    if [ -z "$context_json" ]; then
+        context_json="{}"
+    fi
     
     # Validate inputs
     if ! validate_event_type "$event_type"; then
