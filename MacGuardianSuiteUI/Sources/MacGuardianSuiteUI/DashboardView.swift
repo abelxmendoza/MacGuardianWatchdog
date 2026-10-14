@@ -54,6 +54,9 @@ struct DashboardView: View {
                 // Quick Actions
                 QuickActionsCard(workspace: workspace)
 
+                // Package and application maintenance
+                SoftwareUpdatesCard()
+
                 // System Health (live checks)
                 SystemHealthCard()
 
@@ -251,6 +254,75 @@ struct QuickActionButton: View {
             .background(Color.themeBlack, in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct SoftwareUpdatesCard: View {
+    @State private var confirmUpgrade = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                    .foregroundColor(.themePurple)
+                    .font(.title2)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Software Updates")
+                        .font(.headline)
+                        .foregroundColor(.themeText)
+                    Text("Homebrew tools, Homebrew apps, and Mac App Store apps")
+                        .font(.caption)
+                        .foregroundColor(.themeTextSecondary)
+                }
+                Spacer()
+            }
+
+            Text("Update refreshes catalogs and shows what is outdated. Upgrade Everything installs each available formula and cask update—including auto-update/latest casks—and uses the App Store helper when available.")
+                .font(.caption)
+                .foregroundColor(.themeTextSecondary)
+
+            HStack(spacing: 12) {
+                Button {
+                    #if os(macOS)
+                    TerminalLauncher.shared.openPackageMaintenance(upgrade: false)
+                    #endif
+                } label: {
+                    Label("Check Updates", systemImage: "arrow.clockwise")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.themePurple)
+
+                Button {
+                    confirmUpgrade = true
+                } label: {
+                    Label("Upgrade Everything", systemImage: "arrow.up.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.themePurple)
+            }
+
+            Text("Apps installed directly from vendor websites remain with their own built-in updater.")
+                .font(.caption2)
+                .foregroundColor(.themeTextSecondary)
+        }
+        .padding()
+        .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.themePurpleDark, lineWidth: 1)
+        )
+        .alert("Upgrade all managed software?", isPresented: $confirmUpgrade) {
+            Button("Cancel", role: .cancel) {}
+            Button("Upgrade All", role: .destructive) {
+                #if os(macOS)
+                TerminalLauncher.shared.openPackageMaintenance(upgrade: true)
+                #endif
+            }
+        } message: {
+            Text("Homebrew may quit managed apps while replacing them. Mac App Store coverage may install the small 'mas' helper first.")
+        }
     }
 }
 

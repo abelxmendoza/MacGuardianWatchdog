@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# GUI apps and launchd jobs do not inherit an interactive shell's Homebrew
+# path, so make both Apple Silicon and Intel installations discoverable.
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
+
 # Global error handler
 trap 'error_handler $? $LINENO' ERR
 
@@ -180,7 +184,7 @@ if [ "$SKIP_UPDATES" != true ] && ! should_skip_step "homebrew_update"; then
     
     # Use error recovery for better reliability
     if type execute_with_retry &> /dev/null; then
-        if execute_with_retry "Homebrew update" 3 "brew update 2>&1 | tee -a \"${LOG_DIR:-$CONFIG_DIR/logs}/brew_update.log\""; then
+        if execute_with_retry "Homebrew update" 3 "bash \"$SCRIPT_DIR/package_updates.sh\" update --yes 2>&1 | tee -a \"${LOG_DIR:-$CONFIG_DIR/logs}/brew_update.log\""; then
             success "Homebrew is up to date."
             log_message "SUCCESS" "Homebrew updated"
         else
@@ -189,7 +193,7 @@ if [ "$SKIP_UPDATES" != true ] && ! should_skip_step "homebrew_update"; then
             log_message "WARNING" "Homebrew update failed"
         fi
     else
-        if brew update 2>&1 | tee -a "${LOG_DIR:-$CONFIG_DIR/logs}/brew_update.log"; then
+        if bash "$SCRIPT_DIR/package_updates.sh" update --yes 2>&1 | tee -a "${LOG_DIR:-$CONFIG_DIR/logs}/brew_update.log"; then
             success "Homebrew is up to date."
             log_message "SUCCESS" "Homebrew updated"
         else
@@ -216,17 +220,17 @@ echo ""
     fi
     
     if type execute_with_retry &> /dev/null; then
-        if execute_with_retry "Homebrew upgrade" 2 "brew upgrade 2>&1 | tee -a \"${LOG_DIR:-$CONFIG_DIR/logs}/brew_upgrade.log\""; then
-            success "All tools upgraded."
-            log_message "SUCCESS" "Homebrew packages upgraded"
+        if execute_with_retry "Homebrew upgrade" 2 "bash \"$SCRIPT_DIR/package_updates.sh\" upgrade --yes 2>&1 | tee -a \"${LOG_DIR:-$CONFIG_DIR/logs}/brew_upgrade.log\""; then
+            success "All Homebrew tools and apps upgraded."
+            log_message "SUCCESS" "Homebrew formulae, casks and available App Store apps upgraded"
         else
             warning "Some packages may have failed to upgrade."
             WARNINGS_FOUND=$((WARNINGS_FOUND + 1))
         fi
     else
-        if brew upgrade 2>&1 | tee -a "${LOG_DIR:-$CONFIG_DIR/logs}/brew_upgrade.log"; then
-            success "All tools upgraded."
-            log_message "SUCCESS" "Homebrew packages upgraded"
+        if bash "$SCRIPT_DIR/package_updates.sh" upgrade --yes 2>&1 | tee -a "${LOG_DIR:-$CONFIG_DIR/logs}/brew_upgrade.log"; then
+            success "All Homebrew tools and apps upgraded."
+            log_message "SUCCESS" "Homebrew formulae, casks and available App Store apps upgraded"
         else
             warning "Some packages may have failed to upgrade."
             WARNINGS_FOUND=$((WARNINGS_FOUND + 1))
@@ -240,19 +244,6 @@ echo ""
         fi
     fi
 
-    if [ "$QUIET" != true ]; then
-        echo ""
-echo "${bold}🗑️  Cleaning out old versions...${normal}"
-    fi
-    
-    # Run cleanup and filter out "Skipping" warnings (these are normal - just means package isn't installed)
-    if brew cleanup 2>&1 | grep -v "Warning: Skipping" | grep -v "^$" || true; then
-        success "Cleanup complete."
-    else
-        # Even if there are "Skipping" messages, cleanup still succeeded
-        success "Cleanup complete."
-    fi
-    
     save_checkpoint "homebrew_update"
 else
     if [ "$QUIET" != true ]; then

@@ -136,6 +136,11 @@ run_unit_tests() {
     if [ -f "$SCRIPT_DIR/unit/test_hashing.sh" ]; then
         run_test_file "$SCRIPT_DIR/unit/test_hashing.sh"
     fi
+
+    # Homebrew, cask, and Mac App Store update command coverage
+    if [ -f "$SCRIPT_DIR/test_package_updates.sh" ]; then
+        run_test_file "$SCRIPT_DIR/test_package_updates.sh"
+    fi
     
     # Manual validator tests (if bats not available)
     echo "Running manual validator tests..."

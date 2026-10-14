@@ -162,6 +162,10 @@ Not shown in the app: its anomaly scores are still noisy.
 ./MacGuardianSuite/hardening_assessment.sh   # Hardening score (0-100)
 ./MacGuardianSuite/scheduled_reports.sh daily
 
+# Software maintenance (also available from Dashboard)
+./MacGuardianSuite/package_updates.sh update
+./MacGuardianSuite/package_updates.sh upgrade --install-mas
+
 # Set up launchd automation
 ./MacGuardianSuite/install_scheduler.sh
 ```

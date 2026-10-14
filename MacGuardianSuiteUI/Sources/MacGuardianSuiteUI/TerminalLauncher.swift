@@ -265,6 +265,41 @@ class TerminalLauncher {
             pasteboard.setString(clipboardCommand, forType: .string)
         }
     }
+
+    /// Opens the dedicated software-maintenance command in Terminal.
+    /// Update only refreshes catalogs and reports what is outdated; upgrade
+    /// installs all Homebrew formula/cask updates and Mac App Store updates.
+    func openPackageMaintenance(upgrade: Bool) {
+        let scriptPath = RepoLocator.resolve("MacGuardianSuite/package_updates.sh")
+        guard FileManager.default.fileExists(atPath: scriptPath) else {
+            openTerminal(
+                with: "echo \"MacGuardian's package update script was not found. Run install.sh again.\"; read -p \"Press Enter to close...\"",
+                title: "MacGuardian - Software Updates"
+            )
+            return
+        }
+
+        let operation = upgrade ? "upgrade --yes --install-mas" : "update"
+        let heading = upgrade ? "Upgrade Everything" : "Check for Updates"
+        let command = """
+        clear
+        echo "MacGuardian - \(heading)"
+        echo "================================"
+        echo ""
+        bash \(scriptPath.shellQuoted) \(operation)
+        result=$?
+        echo ""
+        if [ $result -eq 0 ]; then
+            echo "Completed successfully."
+        else
+            echo "Completed with one or more failures. Review the output above."
+        fi
+        echo ""
+        read -p "Press Enter to close..."
+        """
+        openTerminal(with: command, workingDirectory: RepoLocator.path,
+                     title: "MacGuardian - \(heading)")
+    }
     
     /// Opens Terminal.app with mac_guardian.sh (which includes rkhunter)
     func openMacGuardianScript() {
