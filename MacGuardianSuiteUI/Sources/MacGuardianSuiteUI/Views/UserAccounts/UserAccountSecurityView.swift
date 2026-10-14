@@ -162,7 +162,7 @@ struct UserAccountSecurityView: View {
     private func runAudit() {
         isLoading = true
         DispatchQueue.global(qos: .userInitiated).async(execute: {
-            let scriptPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/auditors/user_account_auditor.sh"
+            let scriptPath = "\(RepoLocator.path)/MacGuardianSuite/auditors/user_account_auditor.sh"
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
             process.arguments = [scriptPath, "audit"]

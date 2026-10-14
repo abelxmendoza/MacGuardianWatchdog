@@ -39,9 +39,11 @@ MacGuardian Suite is designed with privacy as a core principle. This document ex
 ### How Data is Stored
 
 All data is stored **locally** on your Mac:
-- Location: `~/Library/Application Support/MacGuardian/`
+- Location: `~/.macguardian/` (readable only by you; the self-check verifies this)
 - Format: JSON files, text logs, SQLite databases
-- Encryption: Not encrypted by default (you can encrypt the directory if desired)
+- Encryption: protected by FileVault if it is on; not separately encrypted
+- Background jobs run a private copy of MacGuardian's scripts from `~/Library/Application Support/MacGuardian/` (scripts only, no collected data)
+- The SMTP password, if you set one, is kept in the macOS Keychain
 
 ### Data Transmission
 
@@ -57,16 +59,13 @@ All data is stored **locally** on your Mac:
 
 ## Data Retention
 
-**Default Retention Periods:**
-- Scan results: 90 days
-- Logs: 30 days
-- Performance data: 30 days
-- Quarantined files: Until manually restored or deleted
-- Threat intelligence cache: 7 days
+- Real-time monitor events (`~/.macguardian/events`): deleted automatically after 7 days
+- Everything else (scan results, reports, logs): kept until you delete it
+- Quarantined files: kept in `~/MacGuardian/quarantine/` until you restore or delete them
 
 **You can:**
-- Adjust retention periods in `config.sh`
-- Manually delete data from `~/Library/Application Support/MacGuardian/`
+- Delete anything in `~/.macguardian/` at any time
+- Remove MacGuardian and all its data with `./uninstall.sh --all`
 - Use `--no-logging` flag (where supported) to disable logging
 
 ## Privacy Modes
@@ -140,7 +139,6 @@ If you configure email reporting:
 
 **Threat Intelligence Feeds:**
 - Abuse.ch (Feodo Tracker, URLhaus)
-- Malware Domain List
 - These are public, open-source feeds
 
 **No third-party analytics or tracking services are used.**
@@ -148,7 +146,7 @@ If you configure email reporting:
 ## Your Rights
 
 You have the right to:
-1. **Access**: View all collected data in `~/Library/Application Support/MacGuardian/`
+1. **Access**: View all collected data in `~/.macguardian/`
 2. **Delete**: Remove any or all collected data
 3. **Opt-Out**: Disable data collection via privacy mode
 4. **Export**: Export your data (JSON format)
@@ -175,8 +173,7 @@ We may update this privacy policy. Changes will be:
 ## Contact
 
 For privacy concerns or questions:
-- Open a GitHub issue
-- Email: [Your Contact Email]
+- Open an issue on the GitHub repository
 
 ## Compliance
 

@@ -5,12 +5,14 @@ APP_NAME="MacGuardian Suite"
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$ROOT_DIR/.." && pwd)"
-BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/release"
-APP_PATH="$BUILD_DIR/$APP_NAME.app"
+APP_PATH="$ROOT_DIR/.build/$APP_NAME.app"
 
 echo "▸ Building Swift package..."
 cd "$ROOT_DIR"
 swift build -c release
+# Ask SwiftPM where it put the binary - the folder differs between toolchains
+# (.build/arm64-apple-macosx/release vs .build/out/Products/Release).
+BIN_DIR="$(swift build -c release --show-bin-path)"
 
 echo "▸ Creating app bundle..."
 rm -rf "$APP_PATH"
@@ -19,7 +21,7 @@ mkdir -p "$APP_PATH/Contents/Resources"
 mkdir -p "$APP_PATH/Contents/Resources/images"
 
 echo "▸ Copying executable..."
-cp "$BUILD_DIR/MacGuardianSuiteUI" "$APP_PATH/Contents/MacOS/"
+cp "$BIN_DIR/MacGuardianSuiteUI" "$APP_PATH/Contents/MacOS/"
 
 echo "▸ Copying icon..."
 if [ -f "$PROJECT_ROOT/Resources/AppIcon.icns" ]; then
@@ -96,14 +98,38 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
 </plist>
 EOF
 
+# Record where this checkout lives so the app finds its scripts wherever the
+# project was downloaded to (read by RepoLocator in AppState.swift).
+/usr/libexec/PlistBuddy -c "Add :MGRepositoryPath string $PROJECT_ROOT" "$APP_PATH/Contents/Info.plist"
+
 echo "▸ Creating PkgInfo..."
 echo -n "APPL????" > "$APP_PATH/Contents/PkgInfo"
 
+echo "▸ Signing app bundle (local ad-hoc signature)..."
+/usr/bin/codesign --force --sign - "$APP_PATH"
+/usr/bin/codesign --verify --deep --strict "$APP_PATH"
+
 echo ""
 echo "✔ Build complete: $APP_PATH"
+
+# Install over the copy in /Applications so the Dock icon opens this build.
+# Set SKIP_INSTALL=1 to only build.
+INSTALL_PATH="/Applications/$APP_NAME.app"
+if [ "${SKIP_INSTALL:-0}" != "1" ]; then
+    echo "▸ Installing to $INSTALL_PATH..."
+    if pgrep -x MacGuardianSuiteUI >/dev/null; then
+        echo "   Quitting running copy..."
+        pkill -x MacGuardianSuiteUI || true
+        sleep 1
+    fi
+    rm -rf "$INSTALL_PATH"
+    ditto "$APP_PATH" "$INSTALL_PATH"
+    echo "   ✔ Installed"
+fi
+
 echo ""
 echo "🚀 To launch:"
-echo "   open \"$APP_PATH\""
+echo "   open \"$INSTALL_PATH\""
 echo ""
 echo "💡 To force macOS to reload icon cache:"
 echo "   killall Finder"

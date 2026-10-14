@@ -123,8 +123,8 @@ audit_user_accounts() {
     current_users="$current_users]"
     
     # Check for new users (simplified comparison)
-    local baseline_user_count=$(grep -o '"username":"[^"]*"' "$USER_BASELINE" 2>/dev/null | wc -l | tr -d ' ' || echo "0")
-    local current_user_count=$(echo "$current_users" | grep -o '"username"' | wc -l | tr -d ' ' || echo "0")
+    local baseline_user_count=$( (grep -o '"username":"[^"]*"' "$USER_BASELINE" 2>/dev/null | wc -l | tr -d ' ' || echo "0") | head -1)
+    local current_user_count=$( (echo "$current_users" | grep -o '"username"' | wc -l | tr -d ' ' || echo "0") | head -1)
     
     if [ "$current_user_count" -gt "$baseline_user_count" ]; then
         issues=$((issues + 1))
@@ -137,7 +137,7 @@ audit_user_accounts() {
     fi
     
     # Check for UID 0 accounts (root)
-    local root_users=$(echo "$current_users" | grep -o '"uid":"0"' | wc -l | tr -d ' ' || echo "0")
+    local root_users=$( (echo "$current_users" | grep -o '"uid":"0"' | wc -l | tr -d ' ' || echo "0") | head -1)
     if [ "$root_users" -gt 0 ]; then
         issues=$((issues + 1))
         
@@ -163,8 +163,8 @@ audit_user_accounts() {
     fi
     
     # Check for admin account changes
-    local baseline_admins=$(grep -o '"is_admin":true' "$USER_BASELINE" 2>/dev/null | wc -l | tr -d ' ' || echo "0")
-    local current_admins=$(echo "$current_users" | grep -o '"is_admin":true' | wc -l | tr -d ' ' || echo "0")
+    local baseline_admins=$( (grep -o '"is_admin":true' "$USER_BASELINE" 2>/dev/null | wc -l | tr -d ' ' || echo "0") | head -1)
+    local current_admins=$( (echo "$current_users" | grep -o '"is_admin":true' | wc -l | tr -d ' ' || echo "0") | head -1)
     
     if [ "$current_admins" != "$baseline_admins" ]; then
         issues=$((issues + 1))
@@ -185,7 +185,7 @@ audit_user_accounts() {
     
     # Check last login times for anomalies
     if command -v last &> /dev/null; then
-        local recent_logins=$(last | head -20 | grep -v "^$" | wc -l | tr -d ' ' || echo "0")
+        local recent_logins=$( (last | head -20 | grep -v "^$" | wc -l | tr -d ' ' || echo "0") | head -1)
         if [ "$recent_logins" -gt 0 ]; then
             info "Recent login activity detected: $recent_logins entries"
         fi

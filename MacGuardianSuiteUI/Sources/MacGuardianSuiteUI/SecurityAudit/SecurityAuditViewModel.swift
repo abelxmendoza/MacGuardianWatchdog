@@ -23,6 +23,8 @@ class SecurityAuditViewModel: ObservableObject {
         // If no checks were found, set error message
         if checks.isEmpty && errorMessage == nil {
             errorMessage = "No audit results found. The script may need to be run from Terminal."
+        } else if !checks.isEmpty {
+            LastAudit.save(summary: summary, date: Date())
         }
     }
     
@@ -45,3 +47,30 @@ class SecurityAuditViewModel: ObservableObject {
     }
 }
 
+
+/// The most recent completed audit, saved so the Dashboard can show a real
+/// score that survives relaunching the app.
+struct LastAudit {
+    let score: Int
+    let failed: Int
+    let date: Date
+
+    private static let scoreKey = "lastAuditScore"
+    private static let failedKey = "lastAuditFailed"
+    private static let dateKey = "lastAuditDate"
+
+    static func save(summary: AuditSummary, date: Date) {
+        let defaults = UserDefaults.standard
+        defaults.set(summary.score, forKey: scoreKey)
+        defaults.set(summary.failed, forKey: failedKey)
+        defaults.set(date, forKey: dateKey)
+    }
+
+    static func load() -> LastAudit? {
+        let defaults = UserDefaults.standard
+        guard let date = defaults.object(forKey: dateKey) as? Date else { return nil }
+        return LastAudit(score: defaults.integer(forKey: scoreKey),
+                         failed: defaults.integer(forKey: failedKey),
+                         date: date)
+    }
+}

@@ -16,19 +16,21 @@ A free, all-in-one security and maintenance platform for macOS combining antivir
 
 MacGuardian Suite is a native macOS app (SwiftUI) backed by shell and Python scripts. It gives you real security tools — not just a UI — in one place:
 
-- **Antivirus & Rootkit Scanning** via ClamAV and rkhunter
-- **File Integrity Monitoring** — SHA-256 baseline + change detection
-- **Real-Time Threat Monitor** — live event stream via WebSocket from local daemon
-- **Threat Intelligence** — IOC matching against Abuse.ch Feodo, URLhaus, and Malware Domain List feeds, with persistent match history
-- **Blue Team Dashboard** — process analysis, network monitoring, behavioral anomaly detection
-- **Omega Guardian Alert System** — rule-based incident engine with throttling and persistent incident store
-- **Security Audit** — posture assessment with pass/fail checks and real security score
-- **Automated Remediation** — dry-run preview before any change, quarantine instead of delete
-- **Cache Cleaner** — browser (Safari, Chrome, Firefox, Edge) + system + Homebrew caches
-- **Process Killer** — force-quit stubborn apps
-- **SSH Security, User Account, Privacy, Network Graph, Incident Timeline** dashboards
+The app has nine tabs, one per job:
 
-All data stays local. Nothing is sent to external servers except optional email reports you configure.
+- **Dashboard** — security score from your last audit, open incidents, live system health, and MacGuardian's check on itself
+- **Audit** — posture check (FileVault, SIP, Gatekeeper, firewall, automatic updates, Remote Login, startup items), file integrity against a baseline, SSH, user accounts, privacy permissions, and the **Self-Check**
+- **Threats** — blue-team process and network analysis with live CPU, memory, disk and network figures
+- **Incidents** — rule-based incidents and a timeline fed by the real-time monitor
+- **Fix** — previewed, per-category remediation; quarantine instead of delete
+- **Processes** — find and quit stubborn or runaway apps
+- **Cleaner** — browser, system and Homebrew caches, Cursor caches, app icon cache
+- **Reports** — generate and browse HTML security reports
+- **Settings** — project folder and email reports
+
+Antivirus and rootkit scans use ClamAV and rkhunter.
+
+All data stays local. Nothing is sent to external servers except optional email reports you configure. See [SECURITY.md](SECURITY.md) for how to verify your download and what MacGuardian does on your Mac.
 
 ---
 
@@ -38,14 +40,8 @@ All data stays local. Nothing is sent to external servers except optional email 
 | --------- | ------- |
 | macOS (SwiftUI app) | 14.0 (Sonoma) |
 | macOS (shell scripts) | 12.0 (Monterey) |
-| Swift | 5.9+ |
-| Homebrew | Any recent version |
-
-Install Xcode Command Line Tools if not present:
-
-```bash
-xcode-select --install
-```
+| Xcode | Full Xcode (the app can't be built with Command Line Tools alone) |
+| Homebrew | Optional, for ClamAV and rkhunter |
 
 ---
 
@@ -53,31 +49,32 @@ xcode-select --install
 
 ### Option A — Native App (Recommended)
 
-```bash
-git clone https://github.com/abelxmendoza/MacGuardianWachdog.git
-cd MacGuardianWachdog/MacGuardianSuiteUI
-swift build -c release
-```
-
-Copy the built app to Applications:
+1. Download the zip (or `git clone https://github.com/abelxmendoza/MacGuardianWatchdog.git`) and unzip it.
+2. In the unzipped folder, double-click **Install MacGuardian.command**, or in Terminal run:
 
 ```bash
-cp -r .build/MacGuardian\ Suite.app /Applications/
+bash install.sh
 ```
 
-Then launch **MacGuardian Suite** from Spotlight, Applications, or the Dock.
+The installer:
 
-First-time setup:
+- checks for macOS 14+ and Xcode (and tells you the exact command if the Xcode license still needs accepting)
+- copies a downloaded zip to `~/Library/Application Support/MacGuardian/Suite`, so you can delete the download afterwards (a git clone stays where it is)
+- prepares `~/.macguardian`
+- offers to install ClamAV and rkhunter with Homebrew and download virus definitions
+- builds the app, installs it to `/Applications`, and points it at its scripts automatically
+- offers to schedule nightly file-integrity checks
+- opens the app
 
-1. The app defaults to `~/Desktop/MacGuardianProject` — click the folder icon in the sidebar if your path is different
-2. Toggle **Safe Mode** on (adds confirmation dialogs before destructive operations)
-3. Optionally configure email in Settings for report delivery
+Run it again any time to update. Options: `--yes` (accept every optional step), `--no-deps`, `--no-launch`.
+
+If macOS says the `.command` file "cannot be opened", right-click it and choose **Open**, or use the Terminal command above.
 
 ### Option B — Command Line
 
 ```bash
-git clone https://github.com/abelxmendoza/MacGuardianWachdog.git
-cd MacGuardianWachdog
+git clone https://github.com/abelxmendoza/MacGuardianWatchdog.git
+cd MacGuardianWatchdog
 chmod +x mac_suite.sh MacGuardianSuite/*.sh
 ./mac_suite.sh
 ```
@@ -122,7 +119,9 @@ Some features require macOS permissions granted in **System Settings > Privacy &
 - Behavioral pattern analysis and threat hunting
 - Optional: osquery, nmap, yara integration
 
-### mac_ai.sh / ai_engine.py / ml_engine.py — ML Analysis
+### mac_ai.sh / ai_engine.py / ml_engine.py — ML Analysis (command line, experimental)
+
+Not shown in the app: its anomaly scores are still noisy.
 
 - Behavioral anomaly detection
 - File classification
@@ -199,13 +198,15 @@ ALERT_ENABLED=true
 
 ## Automated Scheduling
 
-Install launchd jobs to run scans automatically:
+Scheduling is optional: `install.sh` asks, or run it yourself:
 
 ```bash
-./MacGuardianSuite/install_scheduler.sh
+./MacGuardianSuite/install_scheduler.sh                # all three jobs
+./MacGuardianSuite/install_scheduler.sh --jobs reports # only the daily report
+./MacGuardianSuite/install_scheduler.sh --uninstall
 ```
 
-Default schedule:
+Jobs run a private copy of the scripts from `~/Library/Application Support/MacGuardian` (macOS blocks background jobs from Desktop, Documents and Downloads). `install.sh` refreshes that copy on every update.
 
 - **Daily at 2:00 AM** — Mac Watchdog (file integrity)
 - **Sundays at 3:00 AM** — Mac Guardian (full security scan)
@@ -215,30 +216,24 @@ Default schedule:
 
 ## Recent Changes
 
-### Security & Data Integrity Fixes
+### Simpler app
+- 18 tabs and a script sidebar became 9 task-named tabs. Removed screens that didn't work: Real-Time Monitor (needed a server nothing started), Network Graph, the Threat Intel lookup, a duplicate Security tab and a history that never persisted.
+- The Dashboard score now comes from your last Security Audit and survives restarts.
+- Live screens (Incidents, Timeline, SSH, User Accounts, Privacy) read the monitor daemon's events directly; "Monitor running" means it really is.
 
-- **Threat match persistence** — `ThreatMatch` is now `Codable`; match history survives app restarts. `loadThreatMatches` and `saveThreatMatches` are fully implemented.
-- **Alert engine IOC matching** — `iocMatch` condition now only fires when `event.category` is an actual IOC type (ip, domain, hash, url, file\_path). Previously it fired on any medium+ severity event regardless of type.
-- **Alert engine completeness** — `processEvent` now returns all matching rule incidents, not just the first match.
+### Install, trust and self-check
+- `install.sh` / **Install MacGuardian.command**: one-step setup from a download or clone; `uninstall.sh` removes everything.
+- **Self-check** (Dashboard, Audit → Self-Check, `self_check.sh`): verifies scripts against install-time fingerprints, file permissions, the app's code signature and background jobs.
+- Background jobs run a private copy of the scripts, because macOS blocks them from Desktop/Documents/Downloads (scheduled reports had been failing with "Operation not permitted").
+- No personal email address is built in any more; alerts go only to the address you configure.
 
-### Dashboard
-
-- **Security score** — calculated from real scan exit codes (exit 0 = clean, exit 1 = threat found) and IOC match count. No longer a hardcoded 85% default. Shows "Run a scan to get your score" when no data exists.
-- **System Health card** — runs live checks on every load: firewall (`socketfilterfw`), FileVault (`fdesetup`), ClamAV presence (`which clamscan`), Time Machine backup (`tmutil latestbackup`). No longer hardcoded.
-- **Dashboard decluttered** — removed redundant quick-access cards for Process Killer, Cache Cleaner, and Cursor Cache Cleaner. System Health moved to top.
-
-### Cache Cleaner
-
-- **Homebrew cache size** now reads from `~/Library/Caches/Homebrew` (the actual location). Previously checked `/opt/homebrew/var/cache` which always returned 0.
-- Close buttons added to Cache Cleaner and Cursor Cache Cleaner sheets.
-
-### Code Cleanup
-
-- Removed `SecurityStatusCard` — was always hardcoded green, never checked anything real.
-- Removed unreachable `SecurityScoreView` — no tab routed to it and all score values were hardcoded.
-- Removed duplicate `openPanel()` function in `ContentView` (identical to `openPathPicker()`).
-- Removed unused `showThreatIntelligence` bool from `WorkspaceState`.
-- Removed redundant "Copy & Open Terminal" rootkit button from `SecurityDashboardView`.
+### Fixes
+- Fix tab: **Apply** now applies the fix (it previously ran a dry run and reported success), one category at a time.
+- Suspicious-process checks no longer flag Malwarebytes or Apple system services, and no longer abort the scan on the first match.
+- Security Audit: real JSON results, added firewall / automatic updates / Remote Login checks, removed a certificate check that always passed.
+- Permission fixes now find world-writable files (the scan previously never matched anything).
+- Event files are always valid JSON (about 10% were unreadable), the monitor reports each listening port once, and events older than 7 days are cleaned up.
+- Counting bugs (`"0\n0"`) fixed across 14 scripts; Threats tab shows real system figures.
 
 ---
 
@@ -247,18 +242,13 @@ Default schedule:
 ### App won't launch
 
 - Verify macOS 14.0+: `sw_vers`
-- Verify Xcode tools: `xcode-select -p`
-- Rebuild: `cd MacGuardianSuiteUI && swift build -c release`
+- Verify Xcode: `xcode-select -p` should point inside `Xcode.app`
+- Rebuild and reinstall: `bash install.sh` (build log: `~/.macguardian/logs/install-build.log`)
 
 ### Scripts not found
 
-- Set the repository path in the app sidebar (folder icon)
-- Ensure scripts are executable: `chmod +x MacGuardianSuite/*.sh`
-
-### Real-time monitor shows disconnected
-
-- The event daemon must be running: `python3 MacGuardianSuite/event_bus.py`
-- The app connects to `ws://localhost:9765`
+- Run `bash install.sh` again from the project folder; it re-links the app to its scripts
+- Or set the project folder in **Settings → Repository**
 
 ### ClamAV not installed
 

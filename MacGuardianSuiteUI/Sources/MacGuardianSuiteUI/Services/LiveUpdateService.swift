@@ -131,100 +131,65 @@ struct AnyCodable: Codable {
     }
 }
 
-/// WebSocket client for real-time event updates
-class WebSocketClient: ObservableObject {
-    private var webSocketTask: URLSessionWebSocketTask?
-    private let url: URL
-    private var reconnectTimer: Timer?
-    private let maxReconnectAttempts = 10
-    private var reconnectAttempts = 0
-    
-    @Published var isConnected = false
-    @Published var connectionError: String?
-    
-    init(url: URL) {
-        self.url = url
-    }
-    
-    func connect() {
-        guard webSocketTask == nil || webSocketTask?.state != .running else {
-            return
-        }
-        
-        webSocketTask = URLSession.shared.webSocketTask(with: url)
-        webSocketTask?.resume()
-        
-        receiveMessage()
-        isConnected = true
-        connectionError = nil
-        reconnectAttempts = 0
-    }
-    
-    func disconnect() {
-        reconnectTimer?.invalidate()
-        webSocketTask?.cancel(with: .goingAway, reason: nil)
-        webSocketTask = nil
-        isConnected = false
-    }
-    
-    private func receiveMessage() {
-        webSocketTask?.receive { [weak self] result in
-            guard let self = self else { return }
-            
-            switch result {
-            case .success(let message):
-                switch message {
-                case .string(let text):
-                    self.handleMessage(text)
-                case .data(let data):
-                    if let text = String(data: data, encoding: .utf8) {
-                        self.handleMessage(text)
-                    }
-                @unknown default:
-                    break
-                }
-                self.receiveMessage() // Continue receiving
-            case .failure(let error):
-                self.handleError(error)
-            }
-        }
-    }
-    
-    private func handleMessage(_ text: String) {
-        Task { @MainActor in
-            await LiveUpdateService.shared.handleWebSocketMessage(text)
-        }
-    }
-    
-    private func handleError(_ error: Error) {
-        DispatchQueue.main.async {
-            self.isConnected = false
-            self.connectionError = error.localizedDescription
-            self.attemptReconnect()
-        }
-    }
-    
-    private func attemptReconnect() {
-        guard reconnectAttempts < maxReconnectAttempts else {
-            return
-        }
-        
-        reconnectAttempts += 1
-        let delay = min(Double(reconnectAttempts) * 2.0, 30.0) // Exponential backoff, max 30s
+/// Reads the events the monitor daemon (daemons/mg_monitor.sh) writes to
+/// ~/.macguardian/events, one JSON file per event, and picks up new files as
+/// they appear. "Connected" means the monitor daemon is actually running.
+final class EventFileWatcher {
+    private let eventDir = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".macguardian/events")
+    private let pidFile = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".macguardian/.monitor.pid")
+    private let initialLoadLimit = 500
+    private let pollInterval: UInt64 = 3_000_000_000
+    private var lastSeenName = ""
+    private var pollTask: Task<Void, Never>?
 
-        reconnectTimer?.invalidate() // a second error before the prior backoff fires would otherwise leak it
-        reconnectTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-            self?.connect()
-        }
-    }
-    
-    func send(_ message: String) {
-        let message = URLSessionWebSocketTask.Message.string(message)
-        webSocketTask?.send(message) { error in
-            if let error = error {
-                print("WebSocket send error: \(error)")
+    /// Called with each event file's JSON text, oldest first.
+    var onEvent: ((String) -> Void)?
+    /// Called after each poll with whether the monitor daemon is running.
+    var onStatus: ((Bool) -> Void)?
+
+    func start() {
+        guard pollTask == nil else { return }
+        pollTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                self?.poll()
+                try? await Task.sleep(nanoseconds: self?.pollInterval ?? 3_000_000_000)
             }
         }
+    }
+
+    func stop() {
+        pollTask?.cancel()
+        pollTask = nil
+    }
+
+    private func poll() {
+        onStatus?(monitorIsRunning())
+
+        // File names start with the event's Unix time, so name order is time order.
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: eventDir.path) else { return }
+        var fresh = names.filter { $0.hasSuffix(".json") && $0 > lastSeenName }.sorted()
+        if lastSeenName.isEmpty {
+            fresh = Array(fresh.suffix(initialLoadLimit))
+        }
+        guard let newest = fresh.last else { return }
+        lastSeenName = newest
+
+        for name in fresh {
+            let url = eventDir.appendingPathComponent(name)
+            if let text = try? String(contentsOf: url, encoding: .utf8) {
+                onEvent?(text)
+            }
+        }
+    }
+
+    private func monitorIsRunning() -> Bool {
+        guard let text = try? String(contentsOf: pidFile, encoding: .utf8),
+              let pid = Int32(text.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            return false
+        }
+        return kill(pid, 0) == 0
     }
 }
 
@@ -244,8 +209,7 @@ class LiveUpdateService: ObservableObject {
     @Published var connectionError: String?
     @Published var lastUpdate: Date?
     
-    private let webSocketClient: WebSocketClient
-    private let eventBusURL = URL(string: "ws://localhost:9765")!
+    private let eventWatcher = EventFileWatcher()
     private let decoder = JSONDecoder()
     
     // Batch processing
@@ -278,8 +242,16 @@ class LiveUpdateService: ObservableObject {
         self.eventIndex = EventIndex(maxEventsPerType: 500)
         self.timelineHeap = TimelineHeap(maxSize: 10000)
         
-        self.webSocketClient = WebSocketClient(url: eventBusURL)
-        setupWebSocketObservers()
+        eventWatcher.onEvent = { [weak self] text in
+            Task { @MainActor in self?.handleEventJSON(text) }
+        }
+        eventWatcher.onStatus = { [weak self] running in
+            Task { @MainActor in
+                guard let self, self.isConnected != running else { return }
+                self.isConnected = running
+                self.connectionError = running ? nil : "The monitor daemon is not running"
+            }
+        }
         setupPerformanceObservers()
         startBatchProcessor()
     }
@@ -342,25 +314,16 @@ class LiveUpdateService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     func start() {
-        webSocketClient.connect()
+        eventWatcher.start()
     }
-    
+
     func stop() {
-        webSocketClient.disconnect()
+        eventWatcher.stop()
         batchTask?.cancel()
     }
-    
-    private func setupWebSocketObservers() {
-        // Observe connection status
-        webSocketClient.$isConnected
-            .assign(to: &$isConnected)
-        
-        webSocketClient.$connectionError
-            .assign(to: &$connectionError)
-    }
-    
-    /// Process WebSocket message with batching
-    func handleWebSocketMessage(_ text: String) {
+
+    /// Decode one event and queue it for the next batch
+    func handleEventJSON(_ text: String) {
         // Process decoding in detached task to avoid blocking UI
         Task.detached { [weak self] in
             guard let self = self else { return }

@@ -41,9 +41,9 @@ struct SecurityAuditView: View {
                     FeatureInfoCard(
                         icon: "checkmark.shield.fill",
                         title: "Security Audit",
-                        whatItDoes: "Runs a pass/fail check across the macOS security settings that matter most - FileVault encryption, System Integrity Protection, Gatekeeper, firewall, certificate validity, and launch items - and rolls them into one score.",
+                        whatItDoes: "Runs a pass/fail check across the macOS security settings that matter most - FileVault encryption, System Integrity Protection, Gatekeeper, the firewall, automatic security updates, Remote Login and startup items - and rolls them into one score.",
                         whyItMatters: "These settings are easy to accidentally disable (a troubleshooting step, an old installer) and easy to forget to re-enable. This is the fastest way to confirm nothing protective got turned off without you noticing.",
-                        checks: ["FileVault (disk encryption)", "System Integrity Protection (SIP) and Gatekeeper", "Firewall status", "SSL/TLS certificate validity", "Launch agents and daemons"]
+                        checks: ["FileVault (disk encryption)", "System Integrity Protection (SIP) and Gatekeeper", "Firewall", "Automatic security updates", "Remote Login (SSH)", "Startup items (launch agents)"]
                     )
                     .padding(.horizontal)
 

@@ -30,7 +30,7 @@ struct MacGuardianSuiteUIApp: App {
 
                     // Initialize EventPipeline to start listening for events
                     _ = EventPipeline.shared
-                    // Start LiveUpdateService for real-time WebSocket events
+                    // Start reading the monitor daemon's events from ~/.macguardian/events
                     LiveUpdateService.shared.start()
                 }
         }
@@ -107,7 +107,8 @@ private struct MenuBarPanicMenu: View {
 
     private func bringAppToFront() {
         #if os(macOS)
-        workspace.selectedView = .panicKiller
+        workspace.selectedView = .fix
+        workspace.fixSection = .panicKill
         bringMacGuardianAboveAlertFloods()
         #endif
     }

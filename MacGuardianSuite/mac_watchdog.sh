@@ -8,6 +8,11 @@
 
 set -euo pipefail
 
+# Default used by checksum progress reporting. This script sources utils.sh,
+# but does not call its argument parser, so QUIET must be initialized here
+# when nounset mode is enabled.
+QUIET=false
+
 # Global error handler with checkpoint support
 trap 'error_handler $? $LINENO' ERR
 
@@ -34,7 +39,8 @@ error_handler() {
 CONFIG_FILE="$HOME/.mac_watchdog_config"
 BASELINE_FILE="$HOME/.mac_watchdog_baseline.txt"
 CURRENT_CHECKSUMS="$HOME/.mac_watchdog_current.txt"
-ALERT_EMAIL="abelxmendoza@gmail.com"
+# Alerts go to the address the user set in ~/.macguardian/config.conf (if any).
+ALERT_EMAIL="$(sed -n 's/^ALERT_EMAIL="\([^"]*\)".*/\1/p' "$HOME/.macguardian/config.conf" 2>/dev/null | tail -1)"
 MONITOR_PATHS=("$HOME/Documents")
 FULL_SCAN_PATH="/Applications"
 HONEYPOT_DIR="$HOME/Documents/Passwords_DO_NOT_OPEN"
@@ -144,6 +150,9 @@ log_message() {
 send_alert() {
     local subject="$1"
     local body="$2"
+    if [ -z "$ALERT_EMAIL" ]; then
+        return 1  # no address configured; the alert is still logged
+    fi
     local timestamp=$(date)
     
     # Try mail command first (macOS built-in)
@@ -197,7 +206,7 @@ create_checksums() {
     if [ "$use_incremental" = "true" ] && [ -f "$baseline_file" ] && [ -f "$SCRIPT_DIR/algorithms.sh" ]; then
         # Show progress every 30 seconds if possible
         echo "  ⏳ Processing files (this may take several minutes for large directories)..."
-        local stats=$(incremental_hash "$target_dir" "$baseline_file" "$output_file")
+        local stats=$(incremental_hash "$target_dir" "$baseline_file" "$output_file" "$HONEYPOT_DIR")
         local changed=$(echo "$stats" | cut -d'|' -f1)
         local new=$(echo "$stats" | cut -d'|' -f2)
         local unchanged=$(echo "$stats" | cut -d'|' -f3)
@@ -221,6 +230,7 @@ create_checksums() {
         "*/Library/Caches/*"
         "*/tmp/*"
         "*/temp/*"
+        "$HONEYPOT_DIR/*" # Checked separately via modification time below
     )
     
     # Use smart_find if available, with parallel processing and sorting
@@ -234,13 +244,13 @@ create_checksums() {
         # Process files in parallel
         local file_list=$(mktemp)
         smart_find "$target_dir" "${exclude_patterns[@]}" > "$file_list" 2>/dev/null || \
-        find "$target_dir" -type f -print0 2>/dev/null | tr '\0' '\n' > "$file_list"
+        find "$target_dir" -type f -print0 2>/dev/null > "$file_list"
         
         # Process in parallel batches
         local batch_size=100
         local processed=0
         
-        while IFS= read -r file; do
+        while IFS= read -r -d '' file; do
             if [ -f "$file" ] && [ -r "$file" ]; then
                 (
                     local cached_info=$(get_file_info "$file")
@@ -407,7 +417,7 @@ if [ "${ENABLE_PARALLEL:-true}" = true ] && [ -f "$SCRIPT_DIR/utils.sh" ]; then
     echo ""
     
     for path in "${MONITOR_PATHS[@]}"; do
-        local step_name="checksum_$(basename "$path")"
+        step_name="checksum_$(basename "$path")"
         
         # Skip if already completed (checkpoint system)
         if should_skip_step "$step_name"; then
@@ -431,7 +441,7 @@ if [ "${ENABLE_PARALLEL:-true}" = true ] && [ -f "$SCRIPT_DIR/utils.sh" ]; then
         # Use incremental hashing for efficiency
         if run_parallel "$step_name" "create_checksums \"$path\" \"$CURRENT_CHECKSUMS\" \"true\" \"$BASELINE_FILE\"" > /dev/null; then
             wait_all_jobs
-            local wait_status=$?
+            wait_status=$?
             if [ $wait_status -eq 0 ]; then
                 echo "✅ Completed checksum for: $path"
                 log_message "SUCCESS" "Completed checksum for: $path"
@@ -457,7 +467,7 @@ if [ "${ENABLE_PARALLEL:-true}" = true ] && [ -f "$SCRIPT_DIR/utils.sh" ]; then
 else
     # Sequential fallback with incremental hashing
     for path in "${MONITOR_PATHS[@]}"; do
-        local step_name="checksum_$(basename "$path")"
+        step_name="checksum_$(basename "$path")"
         
         # Skip if already completed (checkpoint system)
         if should_skip_step "$step_name"; then
@@ -484,7 +494,7 @@ else
             log_message "SUCCESS" "Completed checksum for: $path"
             save_checkpoint "$step_name"  # Update checkpoint
         else
-            local checksum_status=$?
+            checksum_status=$?
             echo "${red}❌ Checksum failed for: $path (exit code: $checksum_status)${normal}"
             log_message "ERROR" "Checksum failed for: $path (exit code: $checksum_status)"
             echo "${yellow}💾 Checkpoint saved. Run with --resume to retry from here.${normal}"
@@ -531,7 +541,7 @@ if ! should_skip_step "compare_checksums"; then
             echo "✅ No changes detected - files match baseline"
             log_message "SUCCESS" "No integrity violations detected"
         else
-            local diff_lines=$(echo "$DIFF_RESULT" | wc -l | tr -d ' ')
+            diff_lines=$(echo "$DIFF_RESULT" | wc -l | tr -d ' ')
             echo "${yellow}⚠️  Detected $diff_lines line(s) of differences${normal}"
             log_message "WARN" "Integrity violations detected: $diff_lines differences"
         fi
@@ -586,7 +596,7 @@ if ! should_skip_step "check_syslog"; then
     
     if command -v log &> /dev/null; then
         if [ -f "$SYSLOG_COPY" ]; then
-            local new_syslog="$SYSLOG_COPY.new"
+            new_syslog="$SYSLOG_COPY.new"
             log show --last 1d --predicate 'process == "kernel"' 2>/dev/null | head -1000 > "$new_syslog" || true
             
             if [ -s "$new_syslog" ]; then
@@ -594,7 +604,7 @@ if ! should_skip_step "check_syslog"; then
                 mv "$new_syslog" "$SYSLOG_COPY" 2>/dev/null || true
                 
                 if [ -n "$LOG_CHANGES" ]; then
-                    local log_lines=$(echo "$LOG_CHANGES" | wc -l | tr -d ' ')
+                    log_lines=$(echo "$LOG_CHANGES" | wc -l | tr -d ' ')
                     echo "  ⚠️  Detected $log_lines line(s) of log changes"
                     log_message "INFO" "System log changes detected: $log_lines lines"
                 else
@@ -682,4 +692,3 @@ clear_checkpoint
 echo ""
 echo "${bold}${green}✅ Mac Watchdog integrity check completed successfully${normal}"
 log_message "SUCCESS" "Watchdog check completed successfully"
-

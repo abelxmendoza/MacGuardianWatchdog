@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+# Tests write and read ~/.macguardian; keep them away from the real one.
+export HOME="$(mktemp -d)"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

@@ -53,17 +53,7 @@ struct CacheCleanerView: View {
                 .buttonStyle(.bordered)
                 .tint(.themePurple)
                 .disabled(isLoading)
-                
-                // Close/Exit Button
-                Button {
-                    workspace.showCacheCleaner = false
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.themeTextSecondary)
-                }
-                .buttonStyle(.plain)
-                .help("Close Cache Cleaner")
+
             }
             .padding()
             .background(Color.themeDarkGray)
@@ -643,9 +633,7 @@ func formatBytes(_ bytes: Int64) -> String {
 
 #if os(macOS)
 func runBrowserCleanup(args: [String], isPreview: Bool) -> (success: Bool, message: String) {
-    let scriptPath = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Desktop")
-        .appendingPathComponent("MacGuardianProject")
+    let scriptPath = URL(fileURLWithPath: RepoLocator.path)
         .appendingPathComponent("MacGuardianSuite")
         .appendingPathComponent("browser_cleanup.sh")
         .path
@@ -656,7 +644,7 @@ func runBrowserCleanup(args: [String], isPreview: Bool) -> (success: Bool, messa
     
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite"
+    let scriptDir = "\(RepoLocator.path)/MacGuardianSuite"
     let quotedArgs = args.map { $0.shellQuoted }.joined(separator: " ")
     process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted) \(quotedArgs)"]
     

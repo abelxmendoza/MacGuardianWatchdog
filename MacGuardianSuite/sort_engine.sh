@@ -140,9 +140,11 @@ percentile() {
     sort -t'|' -k"$sort_key" -n "$input_file" | sed -n "${pos}p"
 }
 
-# Usage
-if [ "${1:-}" = "--help" ]; then
-    cat <<EOF
+# CLI entry point. Keep this guarded so callers can source the sorting
+# functions without accidentally executing the caller's positional arguments.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    if [ "${1:-}" = "--help" ]; then
+        cat <<EOF
 Advanced Sorting Engine
 
 Usage: $0 [COMMAND] [ARGS]
@@ -156,11 +158,11 @@ Commands:
     percentile INPUT PERCENT [key]
 
 EOF
-    exit 0
-fi
+        exit 0
+    fi
 
-# Run command if provided
-if [ $# -gt 0 ]; then
-    "$@"
+    # Run command if provided
+    if [ $# -gt 0 ]; then
+        "$@"
+    fi
 fi
-

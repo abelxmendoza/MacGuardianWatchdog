@@ -149,7 +149,7 @@ audit_network_deep() {
     # Check for listening ports
     local listening_ports=0
     if command -v lsof &> /dev/null; then
-        listening_ports=$(lsof -i -P -n 2>/dev/null | grep LISTEN | wc -l | tr -d ' ' || echo "0")
+        listening_ports=$( (lsof -i -P -n 2>/dev/null | grep LISTEN | wc -l | tr -d ' ' || echo "0") | head -1)
     fi
     
     # Check for suspicious connections

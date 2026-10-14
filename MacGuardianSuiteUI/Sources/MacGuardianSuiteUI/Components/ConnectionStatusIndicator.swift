@@ -18,7 +18,7 @@ struct ConnectionStatusIndicator: View {
                 .fill(statusColor)
                 .frame(width: 8, height: 8)
             
-            Text(isConnected ? "Connected to Event Bus" : "Disconnected")
+            Text(isConnected ? "Monitor running" : "Monitor not running")
                 .font(.caption)
                 .foregroundColor(.themeTextSecondary)
             

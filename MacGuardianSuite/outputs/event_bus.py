@@ -9,7 +9,12 @@ import json
 import sys
 import os
 import asyncio
-import websockets
+try:
+    # Optional: only needed for the WebSocket broadcast server. The in-process
+    # bus (used by module_manager.py) and the Unix socket work without it.
+    import websockets
+except ImportError:
+    websockets = None
 import socket
 import uuid
 import re
@@ -210,10 +215,9 @@ class EventBus:
         for client in self.websocket_clients:
             try:
                 await client.send(message)
-            except websockets.exceptions.ConnectionClosed:
-                disconnected.add(client)
             except Exception as e:
-                print(f"Error broadcasting to client: {e}", file=sys.stderr)
+                if websockets is None or not isinstance(e, websockets.exceptions.ConnectionClosed):
+                    print(f"Error broadcasting to client: {e}", file=sys.stderr)
                 disconnected.add(client)
         
         # Remove disconnected clients
@@ -232,8 +236,8 @@ class EventBus:
             
             # Keep connection alive
             await websocket.wait_closed()
-        except websockets.exceptions.ConnectionClosed:
-            pass
+        except Exception:
+            pass  # client went away
         finally:
             self.websocket_clients.discard(websocket)
             print(f"WebSocket client disconnected: {websocket.remote_address}")
@@ -268,8 +272,9 @@ class EventBus:
             UDS_SOCKET
         )
         
-        # Set socket permissions
-        os.chmod(UDS_SOCKET, 0o666)
+        # Only this user may connect; anyone who can write to the socket can
+        # inject security events.
+        os.chmod(UDS_SOCKET, 0o600)
         
         print(f"UDS server listening on {UDS_SOCKET}")
         async with server:
@@ -277,6 +282,9 @@ class EventBus:
     
     async def start_websocket_server(self):
         """Start WebSocket server"""
+        if websockets is None:
+            print("WebSocket server disabled (pip install websockets to enable)", file=sys.stderr)
+            return
         async with websockets.serve(self.handle_websocket, WS_HOST, WS_PORT):
             print(f"WebSocket server listening on ws://{WS_HOST}:{WS_PORT}")
             await asyncio.Future()  # Run forever

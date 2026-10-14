@@ -7,7 +7,7 @@
     
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/zsh</string>
+        <string>/bin/bash</string>
         <string>PLACEHOLDER_SCRIPT_PATH</string>
     </array>
     
@@ -30,4 +30,3 @@
     <string>Background</string>
 </dict>
 </plist>
-

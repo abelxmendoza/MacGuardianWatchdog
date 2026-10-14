@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 
+# Tests write and read ~/.macguardian; keep them away from the real one.
+export HOME="$(mktemp -d)"
+
 # ===============================
 # Watcher Output Integration Tests
 # Verifies watchers output Event Spec v1.0.0 compliant JSON

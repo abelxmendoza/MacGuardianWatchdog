@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # ===============================
 # MacGuardian Real-Time Monitor (Enhanced)
@@ -7,9 +7,10 @@
 
 set -euo pipefail
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Keep a monitor-specific directory name because sourced suite modules also
+# define SCRIPT_DIR globally.
+MONITOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SUITE_DIR="$(cd "$MONITOR_DIR/.." && pwd)"
 
 # Source core utilities
 source "$SUITE_DIR/utils.sh" 2>/dev/null || true
@@ -32,33 +33,48 @@ function log_realtime() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $1" | tee -a "$REALTIME_LOG"
 }
 
-# Trap signals for graceful shutdown
-trap 'log_realtime "Monitor daemon shutting down..." "INFO"; exit 0' TERM INT
+# Trap signals for graceful shutdown and never leave a stale PID behind.
+function shutdown_monitor() {
+    log_realtime "Monitor daemon shutting down..." "INFO"
+    exit 0
+}
+function cleanup_monitor() {
+    if [ "$(cat "$PID_FILE" 2>/dev/null || echo "")" = "$$" ]; then
+        rm -f "$PID_FILE"
+    fi
+}
+trap cleanup_monitor EXIT
+trap shutdown_monitor TERM INT
 
 # Check if already running
 if [ -f "$PID_FILE" ]; then
-    local old_pid=$(cat "$PID_FILE" 2>/dev/null || echo "")
-    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+    old_pid=$(cat "$PID_FILE" 2>/dev/null || echo "")
+    old_command=""
+    if [ -n "$old_pid" ]; then
+        old_command=$(ps -p "$old_pid" -o command= 2>/dev/null || echo "")
+    fi
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null && [[ "$old_command" == *"mg_monitor.sh"* ]]; then
         log_realtime "Monitor daemon already running (PID: $old_pid)" "WARNING"
         exit 1
     fi
+    rm -f "$PID_FILE"
 fi
 
 # Write PID file
 echo $$ > "$PID_FILE"
 
 # Source watcher modules
-source "$SCRIPT_DIR/fsevents_watcher.sh" 2>/dev/null || {
+source "$MONITOR_DIR/fsevents_watcher.sh" 2>/dev/null || {
     log_realtime "Failed to load fsevents_watcher.sh" "ERROR"
     exit 1
 }
 
-source "$SCRIPT_DIR/process_watcher.sh" 2>/dev/null || {
+source "$MONITOR_DIR/process_watcher.sh" 2>/dev/null || {
     log_realtime "Failed to load process_watcher.sh" "ERROR"
     exit 1
 }
 
-source "$SCRIPT_DIR/network_watcher.sh" 2>/dev/null || {
+source "$MONITOR_DIR/network_watcher.sh" 2>/dev/null || {
     log_realtime "Failed to load network_watcher.sh" "ERROR"
     exit 1
 }
@@ -69,7 +85,7 @@ if [ -f "$SUITE_DIR/detectors/ids_engine.sh" ]; then
 fi
 
 # Source event writer
-source "$SCRIPT_DIR/event_writer.sh" 2>/dev/null || {
+source "$MONITOR_DIR/event_writer.sh" 2>/dev/null || {
     log_realtime "Failed to load event_writer.sh" "ERROR"
     exit 1
 }
@@ -78,8 +94,8 @@ log_realtime "🚀 MacGuardian Monitor starting (PID: $$)" "INFO"
 log_realtime "Event directory: $EVENT_DIR" "INFO"
 log_realtime "Log directory: $LOG_DIR" "INFO"
 
-# Write startup event
-write_event "system" "info" "MacGuardian Monitor daemon started" "{\"pid\": $$, \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+# Write a schema-valid startup event.
+write_event "config_change" "low" "mg_monitor" "{\"action\": \"monitor_started\", \"pid\": $$, \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 
 # Main event loop
 LOOP_COUNT=0
@@ -128,6 +144,12 @@ while true; do
     
     set -e  # Re-enable exit on error
     
+    # Keep a week of events (checked hourly) so ~/.macguardian/events
+    # doesn't grow forever.
+    if [ $((LOOP_COUNT % 1800)) -eq 1 ]; then
+        find "$EVENT_DIR" -name 'event_*.json' -type f -mtime +"${EVENT_RETENTION_DAYS:-7}" -delete 2>/dev/null || true
+    fi
+
     # Log heartbeat every 100 loops (~5 minutes at 3 second intervals)
     if [ $((LOOP_COUNT % 100)) -eq 0 ]; then
         log_realtime "Monitor heartbeat - Loop $LOOP_COUNT" "INFO"
@@ -137,8 +159,5 @@ while true; do
     sleep 2
 done
 
-# Cleanup on exit
-rm -f "$PID_FILE"
 log_realtime "Monitor daemon stopped" "INFO"
 exit 0
-

@@ -175,7 +175,7 @@ get_security_score() {
 # Get total issues
 get_total_issues() {
     if type get_unresolved_errors &> /dev/null; then
-        get_unresolved_errors 2>/dev/null | wc -l | tr -d ' ' || echo "0"
+        { get_unresolved_errors 2>/dev/null | wc -l | tr -d ' ' || echo "0"; } | head -1
     else
         echo "0"
     fi
@@ -185,7 +185,7 @@ get_total_issues() {
 get_fixed_issues() {
     local error_db="${ERROR_DB:-$HOME/.macguardian/errors/error_database.jsonl}"
     if [ -f "$error_db" ]; then
-        grep -c '"status": "resolved"' "$error_db" 2>/dev/null || echo "0"
+        { grep -c '"status": "resolved"' "$error_db" 2>/dev/null || echo "0"; } | head -1
     else
         echo "0"
     fi
@@ -195,7 +195,7 @@ get_fixed_issues() {
 get_scans_run() {
     local log_dir="${LOG_DIR:-$HOME/.macguardian/logs}"
     if [ -d "$log_dir" ]; then
-        find "$log_dir" -name "*.log" -mtime -1 2>/dev/null | wc -l | tr -d ' ' || echo "0"
+        { find "$log_dir" -name "*.log" -mtime -1 2>/dev/null | wc -l | tr -d ' ' || echo "0"; } | head -1
     else
         echo "0"
     fi

@@ -201,7 +201,7 @@ struct IncidentTimelineView: View {
                 }
             } else {
                 // Try to generate timeline
-                let scriptPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/outputs/timeline_formatter.py"
+                let scriptPath = "\(RepoLocator.path)/MacGuardianSuite/outputs/timeline_formatter.py"
                 let eventDir = FileManager.default.homeDirectoryForCurrentUser
                     .appendingPathComponent(".macguardian/events")
                 let outputPath = FileManager.default.homeDirectoryForCurrentUser

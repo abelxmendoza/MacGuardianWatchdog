@@ -30,22 +30,23 @@ mkdir -p "$AUDIT_DIR"
 
 # Parse arguments
 QUIET=false
+JSON=false
 VERBOSE=false
 RUN_LYNIS=false
 CHECK_FILEVAULT=true
 CHECK_LAUNCH_ITEMS=true
-CHECK_CERTIFICATES=true
 CHECK_SIP=true
 CHECK_GATEKEEPER=true
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -q|--quiet) QUIET=true; shift ;;
+        --json) JSON=true; QUIET=true; shift ;;
         -v|--verbose) VERBOSE=true; shift ;;
         --lynis) RUN_LYNIS=true; shift ;;
         --no-filevault) CHECK_FILEVAULT=false; shift ;;
         --no-launch) CHECK_LAUNCH_ITEMS=false; shift ;;
-        --no-certs) CHECK_CERTIFICATES=false; shift ;;
+        --no-certs) shift ;;  # certificate check removed; flag kept for compatibility
         -h|--help)
             cat <<EOF
 Mac Security Audit - Comprehensive Security Assessment
@@ -55,11 +56,11 @@ Usage: $0 [OPTIONS]
 Options:
     -h, --help          Show this help
     -q, --quiet         Minimal output
+    --json              Print results as JSON (used by the app)
     -v, --verbose       Detailed output
     --lynis             Run full lynis security audit
     --no-filevault      Skip FileVault check
     --no-launch         Skip launch items check
-    --no-certs          Skip certificate checks
 
 EOF
             exit 0
@@ -67,6 +68,20 @@ EOF
         *) shift ;;
     esac
 done
+
+# Each check records one result for the JSON summary.
+CHECK_RESULTS=()
+json_str() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+# record_check NAME CATEGORY STATUS(pass|warning|fail) SEVERITY DESCRIPTION RECOMMENDATION
+record_check() {
+    CHECK_RESULTS+=("{\"name\": \"$(json_str "$1")\", \"category\": \"$(json_str "$2")\", \"status\": \"$3\", \"severity\": \"$4\", \"description\": \"$(json_str "$5")\", \"recommendation\": \"$(json_str "$6")\"}")
+}
+
+# In JSON mode, everything except the final JSON goes to /dev/null so the
+# app can parse the output directly.
+if [ "$JSON" = true ]; then
+    exec 3>&1 >/dev/null 2>&1
+fi
 
 # Check FileVault encryption status
 check_filevault() {
@@ -86,14 +101,17 @@ check_filevault() {
         
         if echo "$fv_status" | grep -q "FileVault is On"; then
             success "FileVault is enabled - Disk encryption is active"
+            record_check "FileVault disk encryption" "Encryption" pass high "FileVault is on, so your data is unreadable without your password if the Mac is lost or stolen." ""
             log_message "SUCCESS" "FileVault encryption enabled"
             return 0
         elif echo "$fv_status" | grep -q "FileVault is Off"; then
             warning "FileVault is DISABLED - Your disk is not encrypted!"
+            record_check "FileVault disk encryption" "Encryption" fail high "FileVault is off: anyone with physical access to this Mac can read its disk." "Turn on FileVault in System Settings → Privacy & Security → FileVault."
             log_message "WARNING" "FileVault encryption disabled"
             return 1
         else
             warning "Could not determine FileVault status"
+            record_check "FileVault disk encryption" "Encryption" warning high "Could not read FileVault status." "Check System Settings → Privacy & Security → FileVault."
             log_message "WARNING" "FileVault status unknown"
             return 1
         fi
@@ -167,41 +185,63 @@ check_launch_items() {
     
     if [ $issues -eq 0 ]; then
         success "No suspicious launch items detected"
+        record_check "Startup items" "Persistence" pass medium "No launch agent has a name associated with miners, backdoors or keyloggers." ""
         return 0
     else
         warning "Found $issues suspicious launch item(s)"
+        record_check "Startup items" "Persistence" warning medium "Found $issues launch agent(s) with a suspicious name in ~/Library/LaunchAgents." "Open ~/Library/LaunchAgents, check what each flagged item belongs to, and remove it if you don't recognise it."
         return 1
     fi
 }
 
-# Check SSL/TLS certificates for expiration
-check_certificates() {
-    if [ "$CHECK_CERTIFICATES" != true ]; then
+# Check the macOS application firewall
+check_firewall() {
+    if [ "$QUIET" != true ]; then
+        echo "${bold}🧱 Firewall...${normal}"
+    fi
+    local state
+    state=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null || echo "")
+    if echo "$state" | grep -q "enabled"; then
+        success "Firewall is enabled"
+        record_check "Firewall" "Network" pass high "The macOS firewall is on and blocks unwanted incoming connections." ""
         return 0
     fi
-    
+    warning "Firewall is disabled"
+    record_check "Firewall" "Network" fail high "The macOS firewall is off, so any app can accept incoming connections from the network." "Turn it on in System Settings → Network → Firewall."
+    return 1
+}
+
+# Check that macOS installs security updates automatically
+check_auto_updates() {
     if [ "$QUIET" != true ]; then
-        echo "${bold}🔒 SSL/TLS Certificate Status...${normal}"
+        echo "${bold}⬇️  Automatic Security Updates...${normal}"
     fi
-    
-    # Check system keychain certificates
-    if command -v security &> /dev/null; then
-        set +e
-        local expired_certs=$(security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain 2>/dev/null | \
-            openssl x509 -noout -enddate 2>/dev/null | \
-            awk -F= '{if ($2 < "'$(date +%Y%m%d)'") print $2}' | wc -l 2>/dev/null | tr -d ' \n' || echo "0")
-        set -e
-        
-        # Ensure expired_certs is a clean integer
-        expired_certs=${expired_certs:-0}
-        expired_certs=$(echo "$expired_certs" | tr -d ' \n' || echo "0")
-        
-        if [ "$expired_certs" -gt 0 ] 2>/dev/null && [ "${VERBOSE:-false}" = "true" ]; then
-            info "Found expired certificates in system keychain"
-        fi
+    local prefs=/Library/Preferences/com.apple.SoftwareUpdate
+    local critical config
+    critical=$(defaults read "$prefs" CriticalUpdateInstall 2>/dev/null || echo "1")
+    config=$(defaults read "$prefs" ConfigDataInstall 2>/dev/null || echo "1")
+    if [ "$critical" = "1" ] && [ "$config" = "1" ]; then
+        success "Security responses and system files install automatically"
+        record_check "Automatic security updates" "Updates" pass high "macOS installs security responses and system data files (like malware definitions) on its own." ""
+        return 0
     fi
-    
-    success "Certificate check completed"
+    warning "Automatic security updates are off"
+    record_check "Automatic security updates" "Updates" warning high "macOS is not set to install security responses and system files automatically, so fixes for actively exploited bugs can be delayed." "Turn on 'Install Security Responses and system files' in System Settings → General → Software Update → Automatic Updates."
+    return 1
+}
+
+# Check whether Remote Login (SSH) accepts connections
+check_remote_login() {
+    if [ "$QUIET" != true ]; then
+        echo "${bold}🔑 Remote Login (SSH)...${normal}"
+    fi
+    if netstat -an -p tcp 2>/dev/null | grep -qE '[.*]22 .*LISTEN'; then
+        warning "Remote Login (SSH) is on"
+        record_check "Remote Login (SSH)" "Network" warning medium "Remote Login is on, so this Mac accepts SSH logins from the network. That's fine if you use it; otherwise it's an open door." "If you don't log in to this Mac remotely, turn off Remote Login in System Settings → General → Sharing."
+        return 1
+    fi
+    success "Remote Login (SSH) is off"
+    record_check "Remote Login (SSH)" "Network" pass medium "Remote Login is off, so nobody can SSH into this Mac." ""
     return 0
 }
 
@@ -266,10 +306,12 @@ check_sip() {
         
         if echo "$sip_status" | grep -q "System Integrity Protection status: enabled"; then
             success "SIP is enabled"
+            record_check "System Integrity Protection" "System" pass critical "SIP is on, protecting macOS system files from modification, even by administrators." ""
             log_message "SUCCESS" "SIP enabled"
             return 0
         else
             warning "SIP may be disabled or status unknown"
+            record_check "System Integrity Protection" "System" fail critical "SIP is off or its status is unknown; malware with admin rights could modify macOS itself." "Restart into Recovery, open Terminal and run: csrutil enable"
             log_message "WARNING" "SIP status unclear"
             return 1
         fi
@@ -296,10 +338,12 @@ check_gatekeeper() {
         
         if echo "$gatekeeper_status" | grep -q "assessments enabled"; then
             success "Gatekeeper is enabled"
+            record_check "Gatekeeper" "Apps" pass high "Gatekeeper is on, so unsigned or known-malicious apps are blocked from opening." ""
             log_message "SUCCESS" "Gatekeeper enabled"
             return 0
         else
             warning "Gatekeeper may be disabled"
+            record_check "Gatekeeper" "Apps" fail high "Gatekeeper is off, so any downloaded app can run without a check." "Run: sudo spctl --master-enable"
             log_message "WARNING" "Gatekeeper disabled or unknown"
             return 1
         fi
@@ -326,7 +370,9 @@ main() {
     check_launch_items || total_issues=$((total_issues + 1))
     check_sip || total_issues=$((total_issues + 1))
     check_gatekeeper || total_issues=$((total_issues + 1))
-    check_certificates || total_issues=$((total_issues + 1))
+    check_firewall || total_issues=$((total_issues + 1))
+    check_auto_updates || total_issues=$((total_issues + 1))
+    check_remote_login || total_issues=$((total_issues + 1))
     
     # Run lynis if requested
     if [ "$RUN_LYNIS" = true ]; then
@@ -348,7 +394,34 @@ main() {
     fi
     
     log_message "INFO" "Security audit completed - $total_issues issues found"
-    
+
+    if [ "$JSON" = true ]; then
+        local passed=0 failed=0 warnings=0
+        for r in "${CHECK_RESULTS[@]}"; do
+            case "$r" in
+                *'"status": "pass"'*) passed=$((passed + 1)) ;;
+                *'"status": "fail"'*) failed=$((failed + 1)) ;;
+                *) warnings=$((warnings + 1)) ;;
+            esac
+        done
+        local total=${#CHECK_RESULTS[@]}
+        # Warnings count half: they're risks worth reviewing, not failures.
+        local score=0
+        [ "$total" -gt 0 ] && score=$(( (passed * 100 + warnings * 50) / total ))
+        {
+            echo "{"
+            echo "  \"checks\": ["
+            local i=0
+            for r in "${CHECK_RESULTS[@]}"; do
+                i=$((i + 1))
+                if [ "$i" -lt "$total" ]; then echo "    $r,"; else echo "    $r"; fi
+            done
+            echo "  ],"
+            echo "  \"summary\": {\"score\": $score, \"passed\": $passed, \"failed\": $failed, \"warnings\": $warnings, \"total\": $total}"
+            echo "}"
+        } >&3
+    fi
+
     exit 0
 }
 

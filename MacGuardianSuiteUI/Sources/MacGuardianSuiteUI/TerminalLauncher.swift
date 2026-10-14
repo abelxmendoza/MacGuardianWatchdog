@@ -269,7 +269,7 @@ class TerminalLauncher {
     /// Opens Terminal.app with mac_guardian.sh (which includes rkhunter)
     func openMacGuardianScript() {
         let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-        let scriptPath = "\(homeDir)/Desktop/MacGuardianProject/MacGuardianSuite/mac_guardian.sh"
+        let scriptPath = "\(RepoLocator.path)/MacGuardianSuite/mac_guardian.sh"
         
         // Check if script exists
         if FileManager.default.fileExists(atPath: scriptPath) {
@@ -277,7 +277,7 @@ class TerminalLauncher {
             echo "🛡️ MacGuardian Security Suite"
             echo "=============================="
             echo ""
-            cd \("\(homeDir)/Desktop/MacGuardianProject".shellQuoted)
+            cd \(RepoLocator.path.shellQuoted)
             ./MacGuardianSuite/mac_guardian.sh
             echo ""
             read -p "Press Enter to close..."
@@ -288,7 +288,7 @@ class TerminalLauncher {
             pasteboard.clearContents()
             pasteboard.setString(command, forType: .string)
             
-            openTerminal(with: command, workingDirectory: "\(homeDir)/Desktop/MacGuardianProject", title: "MacGuardian Suite", copyToClipboard: true)
+            openTerminal(with: command, workingDirectory: RepoLocator.path, title: "MacGuardian Suite", copyToClipboard: true)
         } else {
             // Try alternative paths
             let altPaths = [

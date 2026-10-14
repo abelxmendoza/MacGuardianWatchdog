@@ -15,7 +15,7 @@ THEME_PROFILE_FILE="$THEME_DIR/profile.conf"
 THEME_TEMPLATE_FILE="$THEME_DIR/alert_template.html"
 
 # Default settings
-DEFAULT_ALERT_EMAIL="abelxmendoza@gmail.com"
+DEFAULT_ALERT_EMAIL=""  # set your own address in ~/.macguardian/config.conf
 DEFAULT_MONITOR_PATHS=("$HOME/Documents" "$HOME/Desktop")
 DEFAULT_SCAN_DIR="$HOME/Documents"
 DEFAULT_HONEYPOT_DIR="$HOME/Documents/Passwords_DO_NOT_OPEN"
@@ -74,12 +74,12 @@ CLAMAV_MAX_FILESIZE=100M
 CLAMAV_MAX_FILES=50000
 
 # Report settings
-REPORT_EMAIL="abelxmendoza@gmail.com"  # Set to enable email reports
+REPORT_EMAIL=""  # Set to enable email reports
 REPORT_SCHEDULE="daily"  # daily, weekly, monthly
 REPORT_FORMAT="html"  # html, text, json
 
 # Alerting settings
-ALERT_EMAIL="abelxmendoza@gmail.com"  # Set to enable email alerts
+ALERT_EMAIL=""  # Set to enable email alerts
 ALERT_ENABLED=true
 ALERT_RULES_FILE="$CONFIG_DIR/alerts/rules.conf"
 EOF

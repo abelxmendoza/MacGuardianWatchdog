@@ -2,11 +2,9 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var workspace: WorkspaceState
-    @StateObject private var threatService = ThreatIntelligenceService.shared
-    @State private var securityScore: Int = 0
-    @State private var lastScanDate: Date? = nil
-    @State private var activeThreats: Int = 0
-    
+    @StateObject private var incidentStore = IncidentStore.shared
+    @State private var lastAudit: LastAudit? = nil
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -24,51 +22,43 @@ struct DashboardView: View {
                     Spacer()
                 }
                 .padding(.horizontal)
-                
-                // Security Score Card
-                SecurityScoreCard(score: securityScore)
-                
+
+                // MacGuardian's check on itself
+                SelfCheckCard()
+
+                // Security Score Card (from the last posture audit)
+                SecurityScoreCard(score: lastAudit?.score ?? 0)
+
                 // Quick Stats
                 HStack(spacing: 16) {
                     StatCard(
-                        title: "Active Threats",
-                        value: "\(activeThreats)",
+                        title: "Open Incidents",
+                        value: "\(incidentStore.unacknowledgedCount)",
                         icon: "exclamationmark.triangle.fill",
-                        color: activeThreats > 0 ? .red : .green
+                        color: incidentStore.unacknowledgedCount > 0 ? .red : .green
                     )
                     StatCard(
-                        title: "Last Scan",
-                        value: lastScanDate != nil ? formatDate(lastScanDate!) : "Never",
+                        title: "Last Audit",
+                        value: lastAudit.map { formatDate($0.date) } ?? "Never",
                         icon: "clock.fill",
                         color: .themePurple
                     )
                     StatCard(
-                        title: "Total Scans",
-                        value: "\(workspace.executionHistory.count)",
-                        icon: "chart.bar.fill",
-                        color: .themePurple
+                        title: "Failed Checks",
+                        value: lastAudit.map { "\($0.failed)" } ?? "-",
+                        icon: "checkmark.shield.fill",
+                        color: (lastAudit?.failed ?? 0) > 0 ? .orange : .themePurple
                     )
                 }
-                
-                // Recent Scans
-                RecentScansCard(executions: Array(workspace.executionHistory.prefix(5)))
-                
+
                 // Quick Actions
                 QuickActionsCard(workspace: workspace)
-                
+
                 // System Health (live checks)
                 SystemHealthCard()
 
-                // Security Dashboards Quick Access
-                SecurityDashboardsCard()
-                    .environmentObject(workspace)
-
-                // Omega Guardian Quick Access
+                // Incidents Quick Access
                 OmegaGuardianQuickAccess()
-                    .environmentObject(workspace)
-
-                // Threat Intelligence Quick Access
-                ThreatIntelligenceQuickAccess()
                     .environmentObject(workspace)
 
                 // Rootkit Scan Quick Access
@@ -78,42 +68,10 @@ struct DashboardView: View {
         }
         .background(Color.themeBlack)
         .onAppear {
-            loadDashboardData()
+            lastAudit = LastAudit.load()
         }
     }
-    
-    private func loadDashboardData() {
-        // Find last scan date
-        lastScanDate = workspace.executionHistory
-            .first { $0.finishedAt != nil }?
-            .finishedAt
 
-        // Calculate security score based on real outcomes
-        let total = workspace.executionHistory.count
-        if total == 0 {
-            securityScore = 0
-        } else {
-            // Clean = exit code 0, threat found = exit code 1, error = anything else
-            let cleanScans = workspace.executionHistory.filter {
-                if case .finished(let code) = $0.state { return code == 0 }
-                return false
-            }.count
-            let threatScans = workspace.executionHistory.filter {
-                if case .finished(let code) = $0.state { return code == 1 }
-                return false
-            }.count
-
-            var score = Int((Double(cleanScans) / Double(total)) * 100)
-            // Each threat scan and each IOC match today reduces the score
-            score -= threatScans * 10
-            score -= threatService.stats.matchesToday * 5
-            securityScore = max(0, min(100, score))
-        }
-
-        // Update active threats from threat intelligence service
-        activeThreats = threatService.stats.matchesToday
-    }
-    
     private func formatDate(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
@@ -174,7 +132,7 @@ struct SecurityScoreCard: View {
     }
     
     private var scoreDescription: String {
-        if score == 0 { return "Run a scan to get your score" }
+        if score == 0 { return "Run a Security Audit to get your score" }
         if score >= 80 { return "System is secure" }
         if score >= 60 { return "Some issues detected" }
         return "Action required"
@@ -210,97 +168,6 @@ struct StatCard: View {
     }
 }
 
-struct RecentScansCard: View {
-    let executions: [CommandExecution]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent Scans")
-                    .font(.headline)
-                    .foregroundColor(.themeText)
-                Spacer()
-            }
-            
-            if executions.isEmpty {
-                Text("No scans yet")
-                    .font(.subheadline)
-                    .foregroundColor(.themeTextSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else {
-                ForEach(executions) { execution in
-                    ScanRow(execution: execution)
-                }
-            }
-        }
-        .padding()
-        .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themePurpleDark, lineWidth: 1)
-        )
-    }
-}
-
-struct ScanRow: View {
-    let execution: CommandExecution
-    
-    var body: some View {
-        HStack {
-            Image(systemName: statusIcon)
-                .foregroundColor(statusColor)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(execution.tool.name)
-                    .font(.subheadline.bold())
-                    .foregroundColor(.themeText)
-                Text(formatDate(execution.startedAt))
-                    .font(.caption)
-                    .foregroundColor(.themeTextSecondary)
-            }
-            Spacer()
-            Text(statusText)
-                .font(.caption)
-                .foregroundColor(statusColor)
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private var statusIcon: String {
-        switch execution.state {
-        case .finished: return "checkmark.circle.fill"
-        case .failed: return "xmark.circle.fill"
-        case .running: return "arrow.triangle.2.circlepath"
-        default: return "circle"
-        }
-    }
-    
-    private var statusColor: Color {
-        switch execution.state {
-        case .finished: return .green
-        case .failed: return .red
-        case .running: return .themePurple
-        default: return .themeTextSecondary
-        }
-    }
-    
-    private var statusText: String {
-        switch execution.state {
-        case .finished: return "Success"
-        case .failed: return "Failed"
-        case .running: return "Running"
-        default: return "Idle"
-        }
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
-
 struct QuickActionsCard: View {
     @ObservedObject var workspace: WorkspaceState
     
@@ -312,53 +179,45 @@ struct QuickActionsCard: View {
             
             HStack(spacing: 12) {
                 QuickActionButton(
-                    title: "Security Scan",
+                    title: "Security Audit",
                     icon: "shield.checkered",
                     color: .themePurple
                 ) {
-                    // Navigate to tools and find security scan
-                    workspace.selectedView = .tools
+                    workspace.auditSection = .posture
+                    workspace.selectedView = .audit
                 }
-                
+
                 QuickActionButton(
-                    title: "Generate Report",
+                    title: "Threat Scan",
+                    icon: "shield.lefthalf.filled",
+                    color: .themePurple
+                ) {
+                    workspace.selectedView = .threats
+                }
+
+                QuickActionButton(
+                    title: "Reports",
                     icon: "doc.text.fill",
                     color: .themePurple
                 ) {
-                    // Navigate to reports
                     workspace.selectedView = .reports
                 }
-                
-                QuickActionButton(
-                    title: "View Reports",
-                    icon: "folder.fill",
-                    color: .themePurple
-                ) {
-                    workspace.selectedView = .reports
-                }
-                
+
                 QuickActionButton(
                     title: "Kill Processes",
                     icon: "xmark.circle.fill",
                     color: .red
                 ) {
-                    workspace.showProcessKiller = true
+                    workspace.selectedView = .processes
                 }
-                
+
                 QuickActionButton(
                     title: "Clean Cache",
                     icon: "trash.fill",
                     color: .orange
                 ) {
-                    workspace.showCacheCleaner = true
-                }
-                
-                QuickActionButton(
-                    title: "Cursor Cache",
-                    icon: "cursorarrow.click",
-                    color: .blue
-                ) {
-                    workspace.showCursorCacheCleaner = true
+                    workspace.cleanerSection = .caches
+                    workspace.selectedView = .cleaner
                 }
             }
         }
@@ -704,7 +563,8 @@ struct OmegaGuardianQuickAccess: View {
                 Spacer()
                 
                 Button {
-                    workspace.selectedView = .omegaGuardian
+                    workspace.incidentsSection = .incidents
+                    workspace.selectedView = .incidents
                 } label: {
                     Label("Open Console", systemImage: "arrow.right.circle.fill")
                         .font(.subheadline.bold())
@@ -760,151 +620,69 @@ struct OmegaGuardianQuickAccess: View {
     }
 }
 
-struct SecurityDashboardsCard: View {
-    @EnvironmentObject var workspace: WorkspaceState
-    
-    init() {}
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Security Dashboards")
-                .font(.headline)
-                .foregroundColor(.themeText)
-            
-            HStack(spacing: 12) {
-                QuickActionButton(
-                    title: "SSH Security",
-                    icon: "key.fill",
-                    color: .themePurple
-                ) {
-                    workspace.selectedView = .sshSecurity
-                }
-                
-                QuickActionButton(
-                    title: "User Accounts",
-                    icon: "person.2.fill",
-                    color: .themePurple
-                ) {
-                    workspace.selectedView = .userAccountSecurity
-                }
-                
-                QuickActionButton(
-                    title: "Privacy",
-                    icon: "hand.raised.fill",
-                    color: .themePurple
-                ) {
-                    workspace.selectedView = .privacyHeatmap
-                }
-                
-                QuickActionButton(
-                    title: "Network",
-                    icon: "network",
-                    color: .themePurple
-                ) {
-                    workspace.selectedView = .networkGraph
-                }
-                
-                QuickActionButton(
-                    title: "Timeline",
-                    icon: "clock.fill",
-                    color: .themePurple
-                ) {
-                    workspace.selectedView = .incidentTimeline
-                }
-            }
-        }
-        .padding()
-        .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themePurpleDark, lineWidth: 1)
-        )
-    }
-}
 
-struct ThreatIntelligenceQuickAccess: View {
+/// Shows whether MacGuardian's own scripts, app and jobs passed the self-check.
+struct SelfCheckCard: View {
     @EnvironmentObject var workspace: WorkspaceState
-    @StateObject private var threatService = ThreatIntelligenceService.shared
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "shield.lefthalf.filled")
-                    .foregroundColor(.red)
-                    .font(.title2)
-                Text("Threat Intelligence")
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
                     .font(.headline)
                     .foregroundColor(.themeText)
-                Spacer()
-                
-                if threatService.stats.matchesToday > 0 {
-                    Text("\(threatService.stats.matchesToday) threat(s) today")
-                        .font(.caption.bold())
-                        .foregroundColor(.red)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.red.opacity(0.2))
-                        .cornerRadius(6)
-                }
-            }
-            
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(threatService.stats.totalIOCs)")
-                        .font(.title2.bold())
-                        .foregroundColor(.themePurple)
-                    Text("Total IOCs")
+                if let result = workspace.selfCheck {
+                    Text(result.summary)
                         .font(.caption)
                         .foregroundColor(.themeTextSecondary)
+                    ForEach(result.problems.prefix(3), id: \.self) { problem in
+                        Text("• \(problem)")
+                            .font(.caption)
+                            .foregroundColor(.themeTextSecondary)
+                            .lineLimit(2)
+                    }
                 }
-                
-                Spacer()
-                
-                Button {
-                    workspace.selectedView = .threatIntelligence
-                } label: {
-                    Label("Open Threat Intel", systemImage: "arrow.right.circle.fill")
-                        .font(.subheadline.bold())
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
             }
-            
-            if threatService.stats.matchesToday > 0 {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                    Text("\(threatService.stats.matchesToday) threat match(es) detected today")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.red.opacity(0.1))
-                .cornerRadius(8)
-            } else {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .foregroundColor(.green)
-                    Text("No threats detected today")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(8)
+            Spacer()
+            Button("Details") {
+                workspace.auditSection = .selfCheck
+                workspace.selectedView = .audit
             }
+            .buttonStyle(.bordered)
+            Button {
+                workspace.selfCheck = nil
+                workspace.runSelfCheck()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .help("Run the self-check again")
         }
         .padding()
         .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themePurpleDark, lineWidth: 1)
+                .stroke(color.opacity(0.6), lineWidth: 1)
         )
-        .onAppear {
-            threatService.loadIOCs()
-        }
+    }
+
+    private var title: String {
+        guard let result = workspace.selfCheck else { return "Checking MacGuardian itself..." }
+        if !result.passed { return "MacGuardian self-check found problems" }
+        return result.problems.isEmpty ? "MacGuardian is intact" : "MacGuardian is intact, with warnings"
+    }
+
+    private var icon: String {
+        guard let result = workspace.selfCheck else { return "hourglass" }
+        return result.passed ? "checkmark.seal.fill" : "exclamationmark.octagon.fill"
+    }
+
+    private var color: Color {
+        guard let result = workspace.selfCheck else { return .themePurple }
+        if !result.passed { return .red }
+        return result.problems.isEmpty ? .green : .orange
     }
 }
-

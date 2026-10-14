@@ -126,9 +126,9 @@ collect_scan_events() {
     
     # Parse results and create event objects
     if [ -f "$results_file" ]; then
-        local issues=$(grep -c "⚠️\|❌\|🚨" "$results_file" 2>/dev/null || echo "0")
-        local warnings=$(grep -c "⚠️" "$results_file" 2>/dev/null || echo "0")
-        local critical=$(grep -c "🚨\|CRITICAL" "$results_file" 2>/dev/null || echo "0")
+        local issues=$( (grep -c "⚠️\|❌\|🚨" "$results_file" 2>/dev/null || echo "0") | head -1)
+        local warnings=$( (grep -c "⚠️" "$results_file" 2>/dev/null || echo "0") | head -1)
+        local critical=$( (grep -c "🚨\|CRITICAL" "$results_file" 2>/dev/null || echo "0") | head -1)
         
         # Create JSON events array
         events=$(cat <<EOF

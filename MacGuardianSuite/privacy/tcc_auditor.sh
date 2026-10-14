@@ -71,6 +71,9 @@ audit_tcc_permissions() {
         local current_count=$(sqlite3 "$USER_TCC_DB" "SELECT COUNT(*) FROM access WHERE allowed=1;" 2>/dev/null || echo "0")
         local baseline_count=$(grep -o '"permission_count":[0-9]*' "$PRIVACY_BASELINE" 2>/dev/null | cut -d: -f2 || echo "0")
         
+        current_count="${current_count:-0}"
+        baseline_count="${baseline_count:-0}"
+
         # Get current permissions with details
         local current_perms=$(sqlite3 "$USER_TCC_DB" -json "SELECT client, service, allowed FROM access WHERE allowed=1;" 2>/dev/null || echo "[]")
         

@@ -2,7 +2,16 @@
 
 # ===============================
 # Mac Guardian Scheduler Installer
-# Sets up automated daily/weekly runs
+# Sets up automated daily/weekly runs:
+#   com.macguardian.daily   - file integrity check (mac_watchdog.sh), 2:00 AM daily
+#   com.macguardian.weekly  - full check (mac_guardian.sh), 3:00 AM Sundays
+#   com.macguardian.reports - security report (scheduled_reports.sh), 9:00 AM daily
+#
+# Usage: install_scheduler.sh                 install all three jobs
+#        install_scheduler.sh --jobs reports  install only the listed jobs
+#                                             (daily, weekly, reports; comma-separated)
+#        install_scheduler.sh --refresh       update only the jobs already installed
+#        install_scheduler.sh --uninstall     remove all three
 # ===============================
 
 set -euo pipefail
@@ -11,140 +20,121 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
-PLIST_FILE="$LAUNCH_AGENTS_DIR/com.macguardian.daily.plist"
-WEEKLY_PLIST_FILE="$LAUNCH_AGENTS_DIR/com.macguardian.weekly.plist"
+LOG_DIR="$HOME/.macguardian/logs"
+# macOS privacy controls stop background jobs from reading Desktop, Documents
+# and Downloads, so jobs run a private copy of the scripts from here (the same
+# place install_monitor_daemon.sh uses).
+RUNTIME_DIR="$HOME/Library/Application Support/MacGuardian"
+USER_DOMAIN="gui/$(id -u)"
+LABELS=(com.macguardian.daily com.macguardian.weekly com.macguardian.reports)
 
-# Create launchd plist for daily watchdog runs
-create_daily_plist() {
-    cat > "$PLIST_FILE" <<EOF
+# write_plist LABEL "SCHEDULE_XML" SCRIPT [ARGS...]
+write_plist() {
+    local label="$1" schedule="$2" script="$3"
+    shift 3
+    local args=""
+    for a in "$@"; do args+="        <string>$a</string>"$'\n'; done
+    local plist="$LAUNCH_AGENTS_DIR/$label.plist"
+    cat > "$plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.macguardian.daily</string>
+    <string>$label</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$SCRIPT_DIR/mac_watchdog.sh</string>
-        <string>-q</string>
-    </array>
+        <string>/bin/bash</string>
+        <string>$RUNTIME_DIR/$script</string>
+$args    </array>
     <key>StartCalendarInterval</key>
     <dict>
-        <key>Hour</key>
-        <integer>2</integer>
-        <key>Minute</key>
-        <integer>0</integer>
+$schedule
     </dict>
     <key>RunAtLoad</key>
     <false/>
     <key>StandardOutPath</key>
-    <string>$HOME/.macguardian/logs/watchdog_daily.log</string>
+    <string>$LOG_DIR/$label.log</string>
     <key>StandardErrorPath</key>
-    <string>$HOME/.macguardian/logs/watchdog_daily_error.log</string>
+    <string>$LOG_DIR/$label.error.log</string>
 </dict>
 </plist>
 EOF
-    chmod 644 "$PLIST_FILE"
-    success "Created daily watchdog plist"
+    chmod 644 "$plist"
 }
 
-# Create launchd plist for weekly guardian runs
-create_weekly_plist() {
-    cat > "$WEEKLY_PLIST_FILE" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.macguardian.weekly</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$SCRIPT_DIR/mac_guardian.sh</string>
-        <string>-y</string>
-        <string>--report</string>
-    </array>
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Weekday</key>
-        <integer>0</integer>
-        <key>Hour</key>
-        <integer>3</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
-    <key>RunAtLoad</key>
-    <false/>
-    <key>StandardOutPath</key>
-    <string>$HOME/.macguardian/logs/guardian_weekly.log</string>
-    <key>StandardErrorPath</key>
-    <string>$HOME/.macguardian/logs/guardian_weekly_error.log</string>
-</dict>
-</plist>
-EOF
-    chmod 644 "$WEEKLY_PLIST_FILE"
-    success "Created weekly guardian plist"
+load_job() {
+    local label="$1" plist="$LAUNCH_AGENTS_DIR/$1.plist"
+    launchctl bootout "$USER_DOMAIN/$label" 2>/dev/null || true
+    if ! launchctl bootstrap "$USER_DOMAIN" "$plist" 2>/dev/null; then
+        launchctl load "$plist"
+    fi
 }
 
-# Install scheduler
+# wants JOB: true if JOB (daily|weekly|reports) is in the selected set
+wants() { [[ ",$SELECTED," == *",$1,"* ]]; }
+
 install_scheduler() {
     echo "${bold}📅 Installing Mac Guardian Scheduler...${normal}"
     echo ""
-    
-    # Create LaunchAgents directory if it doesn't exist
-    mkdir -p "$LAUNCH_AGENTS_DIR"
-    mkdir -p "$HOME/.macguardian/logs"
-    
-    # Create plists
-    create_daily_plist
-    create_weekly_plist
-    
-    # Load the launch agents
-    if launchctl list | grep -q "com.macguardian.daily"; then
-        launchctl unload "$PLIST_FILE" 2>/dev/null || true
+    if [ -z "$SELECTED" ]; then
+        info "No scheduled jobs to install"
+        return 0
     fi
-    launchctl load "$PLIST_FILE"
-    success "Loaded daily watchdog scheduler"
-    
-    if launchctl list | grep -q "com.macguardian.weekly"; then
-        launchctl unload "$WEEKLY_PLIST_FILE" 2>/dev/null || true
-    fi
-    launchctl load "$WEEKLY_PLIST_FILE"
-    success "Loaded weekly guardian scheduler"
-    
-    echo ""
+
+    mkdir -p "$LAUNCH_AGENTS_DIR" "$LOG_DIR" "$RUNTIME_DIR"
+    /usr/bin/ditto "$SCRIPT_DIR" "$RUNTIME_DIR"
+    success "Installed job runtime: $RUNTIME_DIR"
+
+    wants daily && write_plist com.macguardian.daily \
+        "        <key>Hour</key><integer>2</integer>
+        <key>Minute</key><integer>0</integer>" \
+        mac_watchdog.sh -q
+    wants weekly && write_plist com.macguardian.weekly \
+        "        <key>Weekday</key><integer>0</integer>
+        <key>Hour</key><integer>3</integer>
+        <key>Minute</key><integer>0</integer>" \
+        mac_guardian.sh -y --report
+    wants reports && write_plist com.macguardian.reports \
+        "        <key>Hour</key><integer>9</integer>
+        <key>Minute</key><integer>0</integer>" \
+        scheduled_reports.sh daily
+
+    for job in daily weekly reports; do
+        wants "$job" && load_job "com.macguardian.$job"
+    done
+
     success "Scheduler installed successfully!"
     echo ""
-    info "Daily watchdog runs: 2:00 AM every day"
-    info "Weekly guardian runs: 3:00 AM every Sunday"
+    wants daily && info "File integrity check: 2:00 AM every day"
+    wants weekly && info "Full security check:  3:00 AM every Sunday"
+    wants reports && info "Security report:      9:00 AM every day"
+    info "Logs: $LOG_DIR"
     echo ""
     echo "To uninstall, run: $0 --uninstall"
 }
 
-# Uninstall scheduler
 uninstall_scheduler() {
     echo "${bold}🗑️  Uninstalling Mac Guardian Scheduler...${normal}"
-    echo ""
-    
-    if [ -f "$PLIST_FILE" ]; then
-        launchctl unload "$PLIST_FILE" 2>/dev/null || true
-        rm "$PLIST_FILE"
-        success "Removed daily scheduler"
-    fi
-    
-    if [ -f "$WEEKLY_PLIST_FILE" ]; then
-        launchctl unload "$WEEKLY_PLIST_FILE" 2>/dev/null || true
-        rm "$WEEKLY_PLIST_FILE"
-        success "Removed weekly scheduler"
-    fi
-    
-    echo ""
-    success "Scheduler uninstalled successfully!"
+    for label in "${LABELS[@]}"; do
+        local plist="$LAUNCH_AGENTS_DIR/$label.plist"
+        launchctl bootout "$USER_DOMAIN/$label" 2>/dev/null || launchctl unload "$plist" 2>/dev/null || true
+        if [ -f "$plist" ]; then
+            rm "$plist"
+            success "Removed $label"
+        fi
+    done
+    success "Scheduler uninstalled"
 }
 
-# Main
-if [ "${1:-}" = "--uninstall" ]; then
-    uninstall_scheduler
-else
-    install_scheduler
-fi
-
+SELECTED="daily,weekly,reports"
+case "${1:-}" in
+    --uninstall) uninstall_scheduler; exit 0 ;;
+    --jobs) SELECTED="${2:-}" ;;
+    --refresh)
+        SELECTED=""
+        for job in daily weekly reports; do
+            [ -f "$LAUNCH_AGENTS_DIR/com.macguardian.$job.plist" ] && SELECTED="${SELECTED:+$SELECTED,}$job"
+        done ;;
+esac
+install_scheduler

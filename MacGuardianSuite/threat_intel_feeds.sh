@@ -26,7 +26,7 @@ update_threat_feeds() {
     # Abuse.ch Feodo Tracker (malware IPs)
     if command -v curl &> /dev/null; then
         echo "  • Fetching Abuse.ch Feodo Tracker..."
-        if curl -s "https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt" -o "$THREAT_INTEL_DIR/abuse_ch_feodo.txt" 2>/dev/null; then
+        if curl -sf --connect-timeout 10 --max-time 60 "https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt" -o "$THREAT_INTEL_DIR/abuse_ch_feodo.txt" 2>/dev/null; then
             success "Abuse.ch Feodo Tracker updated"
             updated=$((updated + 1))
         else
@@ -35,21 +35,13 @@ update_threat_feeds() {
         
         # Abuse.ch URLhaus (malicious URLs)
         echo "  • Fetching Abuse.ch URLhaus..."
-        if curl -s "https://urlhaus.abuse.ch/downloads/csv_recent/" -o "$THREAT_INTEL_DIR/abuse_ch_urlhaus.csv" 2>/dev/null; then
+        if curl -sf --connect-timeout 10 --max-time 60 "https://urlhaus.abuse.ch/downloads/csv_recent/" -o "$THREAT_INTEL_DIR/abuse_ch_urlhaus.csv" 2>/dev/null; then
             success "Abuse.ch URLhaus updated"
             updated=$((updated + 1))
         else
             warning "Failed to fetch URLhaus feed"
         fi
-        
-        # Malware Domain List
-        echo "  • Fetching Malware Domain List..."
-        if curl -s "https://www.malwaredomainlist.com/hostslist/hosts.txt" -o "$THREAT_INTEL_DIR/malware_domains.txt" 2>/dev/null; then
-            success "Malware Domain List updated"
-            updated=$((updated + 1))
-        else
-            warning "Failed to fetch Malware Domain List"
-        fi
+
     else
         warning "curl not available - cannot fetch threat feeds"
         return 1

@@ -59,6 +59,18 @@ while [[ $# -gt 0 ]]; do
         --cleanup-disk) CLEANUP_DISK=true; shift ;;
         --fix-all) FIX_ALL=true; FIX_PERMISSIONS=true; CLEANUP_DISK=true; shift ;;
         --from-blueteam) BLUETEAM_RESULTS_FILE="$2"; FIX_ALL=true; shift 2 ;;
+        --preview-all) FIX_PROCESSES=true; FIX_LAUNCH_ITEMS=true; shift ;;
+        --only)
+            # Run exactly one kind of fix (used by the app's Apply button).
+            FIX_PERMISSIONS=false; CLEANUP_DISK=false; FIX_PROCESSES=false; FIX_LAUNCH_ITEMS=false
+            case "${2:-}" in
+                permissions) FIX_PERMISSIONS=true ;;
+                disk) CLEANUP_DISK=true ;;
+                processes) FIX_PROCESSES=true ;;
+                launch) FIX_LAUNCH_ITEMS=true ;;
+                *) echo "Unknown --only category: ${2:-} (use permissions, disk, processes or launch)" >&2; exit 2 ;;
+            esac
+            shift 2 ;;
         -h|--help)
             cat <<EOF
 Mac Remediation - Auto-Fix Security Issues
@@ -79,6 +91,8 @@ Options:
     --cleanup-disk      Clean up disk space
     --fix-all           Fix all safe issues (permissions, disk cleanup)
     --from-blueteam FILE  Fix issues from Blue Team results file
+    --preview-all       Also preview process and launch-item fixes
+    --only CATEGORY     Run one kind of fix: permissions, disk, processes or launch
 
 Safety:
     By default, this runs in DRY-RUN mode (shows what would be fixed)
@@ -152,7 +166,7 @@ fix_file_permissions() {
                     fi
                 fi
             fi
-        done < <(find "$dir" -type f -perm -002 2>/dev/null | head -100)
+        done < <(find "$dir" -type f -perm -002 -print0 2>/dev/null)
     done
     
     if [ $issues -eq 0 ]; then
@@ -179,23 +193,29 @@ fix_suspicious_processes() {
     local suspicious_patterns=("miner" "crypto" "bitcoin" "malware" "trojan" "backdoor" "keylogger")
     local suspicious_pids=()
     
-    # Find suspicious processes
-    for pattern in "${suspicious_patterns[@]}"; do
-        while IFS= read -r line; do
-            if [ -n "$line" ]; then
-                local pid=$(echo "$line" | awk '{print $2}')
-                local cmd=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}')
-                
-                # Skip system processes (CryptoTokenKit, etc.)
-                if echo "$cmd" | grep -qi "CryptoTokenKit\|/System/Library"; then
-                    continue
-                fi
-                
-                suspicious_pids+=("$pid|$cmd")
-            fi
-        done < <(ps aux | grep -i "$pattern" | grep -v grep || true)
-    done
-    
+    # Find suspicious processes. Match the program's own name, not its whole
+    # path or arguments - otherwise e.g. Malwarebytes (installed under
+    # ".../Malwarebytes/...") is flagged as "malware" and would be killed.
+    while read -r pid comm; do
+        [ -n "$pid" ] || continue
+        local name
+        name="$(basename "$comm")"
+        local matched=false
+        for pattern in "${suspicious_patterns[@]}"; do
+            if echo "$name" | grep -qi "$pattern"; then matched=true; break; fi
+        done
+        $matched || continue
+        # macOS's own read-only system volume can't hold a dropped program.
+        case "$comm" in /System/*|/usr/bin/*|/usr/sbin/*|/usr/libexec/*|/bin/*|/sbin/*) continue ;; esac
+        # Skip software signed by Apple or an identified developer; dropped
+        # miners and backdoors don't carry a valid Developer ID signature.
+        if [ -f "$comm" ] && codesign --verify "$comm" 2>/dev/null && \
+           codesign -dv --verbose=2 "$comm" 2>&1 | grep -qE "Authority=(Developer ID Application|(macOS )?Software Signing|Apple Mac OS Application Signing)"; then
+            continue
+        fi
+        suspicious_pids+=("$pid|$comm")
+    done < <(ps -axo pid=,comm=)
+
     if [ ${#suspicious_pids[@]} -eq 0 ]; then
         success "No suspicious processes found"
         return 0
@@ -280,7 +300,7 @@ cleanup_disk_space() {
             log_remediation "DISK_CLEANUP" "$cache_dir" "DRY_RUN"
         else
             # Clean old cache files (older than 30 days)
-            local cleaned=$(find "$cache_dir" -type f -mtime +30 -delete 2>/dev/null | wc -l | tr -d ' ' || echo "0")
+            local cleaned=$( (find "$cache_dir" -type f -mtime +30 -print -delete 2>/dev/null | wc -l | tr -d ' ' || echo "0") | head -1)
             if [ "$cleaned" -gt 0 ]; then
                 freed=$((freed + cleaned))
                 success "Cleaned $cleaned old cache file(s) from $cache_dir"

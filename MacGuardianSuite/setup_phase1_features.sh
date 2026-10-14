@@ -31,46 +31,13 @@ if [ -z "${REPORT_EMAIL:-}" ]; then
     fi
 fi
 
-# Create launchd plist for daily reports
-LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-mkdir -p "$LAUNCHD_DIR"
-
-cat > "$LAUNCHD_DIR/com.macguardian.reports.plist" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.macguardian.reports</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$SCRIPT_DIR/scheduled_reports.sh</string>
-        <string>daily</string>
-    </array>
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>9</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
-    <key>RunAtLoad</key>
-    <false/>
-    <key>StandardOutPath</key>
-    <string>$HOME/.macguardian/reports/scheduler.log</string>
-    <key>StandardErrorPath</key>
-    <string>$HOME/.macguardian/reports/scheduler_error.log</string>
-</dict>
-</plist>
-EOF
-
-# Load the launchd job
-launchctl unload "$LAUNCHD_DIR/com.macguardian.reports.plist" 2>/dev/null || true
-launchctl load "$LAUNCHD_DIR/com.macguardian.reports.plist" 2>/dev/null && {
+# Daily reports run from launchd via the shared scheduler, which installs a
+# private copy of the scripts that background jobs are allowed to run.
+if "$SCRIPT_DIR/install_scheduler.sh" --jobs reports >/dev/null; then
     success "✅ Daily reports scheduled (9:00 AM daily)"
-} || {
-    warning "⚠️  Could not load launchd job (may need to run manually)"
-}
+else
+    warning "⚠️  Could not install the scheduler (run install_scheduler.sh manually)"
+fi
 
 echo ""
 

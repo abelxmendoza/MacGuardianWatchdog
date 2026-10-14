@@ -55,7 +55,7 @@ struct LogoView: View {
         let devPaths = [
             "\(FileManager.default.currentDirectoryPath)/Resources/images/MacGlogo.png",
             "\(FileManager.default.currentDirectoryPath)/MacGuardianSuiteUI/Resources/images/MacGlogo.png",
-            "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuiteUI/Resources/images/MacGlogo.png"
+            "\(RepoLocator.path)/MacGuardianSuiteUI/Resources/images/MacGlogo.png"
         ]
         
         for path in devPaths {

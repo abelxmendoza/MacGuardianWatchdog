@@ -389,7 +389,7 @@ fi
 
 # Process results
 if [ -f "$SECURITY_RESULTS" ]; then
-    check_issues=$(grep -c "⚠️\|❌" "$SECURITY_RESULTS" 2>/dev/null | tr -d ' ' || echo "0")
+    check_issues=$( (grep -c "⚠️\|❌" "$SECURITY_RESULTS" 2>/dev/null | tr -d ' ' || echo "0") | head -1)
     check_issues=${check_issues:-0}
     if [ "$check_issues" -gt 0 ] 2>/dev/null; then
         ISSUES_FOUND=$((ISSUES_FOUND + check_issues))

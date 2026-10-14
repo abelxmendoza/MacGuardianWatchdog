@@ -119,14 +119,15 @@ analyze_processes() {
                 break
             fi
         fi
-    done < <(ps aux | awk 'NR>1 {print $2, $3, $4, $11, $12, $13}' 2>/dev/null | head -500)
+    done < <(ps -axo pid=,%cpu=,%mem=,comm= 2>/dev/null | head -500)
     
     # Check for suspicious patterns
     for proc in "${processes[@]}"; do
         local pid=$(echo "$proc" | awk '{print $1}')
         local cpu=$(echo "$proc" | awk '{print $2}')
         local mem=$(echo "$proc" | awk '{print $3}')
-        local cmd=$(echo "$proc" | cut -d' ' -f4-)
+        # Full executable path (may contain spaces)
+        local cmd=$(echo "$proc" | awk '{$1=$2=$3=""; sub(/^ +/, ""); print}')
         
         # High CPU/Memory usage (using awk for comparison)
         if [ -n "$cpu" ] && [ -n "$mem" ]; then
@@ -166,10 +167,23 @@ analyze_processes() {
             patterns="miner crypto bitcoin malware trojan backdoor"
         fi
         
+        # Match the program's own name, not its folder: Malwarebytes lives in
+        # ".../Malwarebytes/..." and must not be reported as "malware".
+        local name
+        name="$(basename "$cmd")"
         for pattern in $patterns; do
-            if echo "$cmd" | grep -qi "$pattern"; then
-                error_exit "🚨 THREAT DETECTED: Suspicious process matching IOC - PID $pid: $cmd"
+            if echo "$name" | grep -qi "$pattern"; then
+                # macOS's read-only system volume and properly signed software
+                # aren't dropped malware.
+                case "$cmd" in /System/*|/usr/bin/*|/usr/sbin/*|/usr/libexec/*|/bin/*|/sbin/*) break ;; esac
+                if [ -f "$cmd" ] && codesign --verify "$cmd" 2>/dev/null && \
+                   codesign -dv --verbose=2 "$cmd" 2>&1 | grep -qE "Authority=(Developer ID Application|(macOS )?Software Signing|Apple Mac OS Application Signing)"; then
+                    break
+                fi
+                warning "🚨 THREAT: Suspicious unsigned process matching IOC '$pattern' - PID $pid: $cmd"
+                log_message "CRITICAL" "Suspicious process matching IOC - PID $pid: $cmd"
                 suspicious_count=$((suspicious_count + 1))
+                break
             fi
         done
     done
@@ -418,8 +432,8 @@ behavioral_analysis() {
         info "Creating behavioral baseline..."
         
         local proc_count=$(ps aux | wc -l | tr -d ' ')
-    local net_conns=$(lsof -i -P -n 2>/dev/null | grep ESTABLISHED | wc -l | tr -d ' ' || echo "0")
-    local users=$(who | wc -l | tr -d ' ' || echo "0")
+    local net_conns=$( (lsof -i -P -n 2>/dev/null | grep ESTABLISHED | wc -l | tr -d ' ' || echo "0") | head -1)
+    local users=$( (who | wc -l | tr -d ' ' || echo "0") | head -1)
     local load=$(uptime | awk -F'load averages:' '{print $2}' | xargs || echo "unknown")
     
     local baseline_data=$(cat <<EOF
@@ -707,7 +721,7 @@ YARAEOF
     set +e
     if yara -r "$yara_rules" "$scan_target" 2>&1 | tee "$yara_output"; then
         set -e
-        local matches=$(grep -c "matches" "$yara_output" 2>/dev/null || echo "0")
+        local matches=$( (grep -c "matches" "$yara_output" 2>/dev/null || echo "0") | head -1)
         if [ "$matches" -gt 0 ]; then
             warning "Yara found $matches pattern match(es) - Review: $yara_output"
             issues=$((issues + 1))
@@ -848,7 +862,7 @@ main() {
         wait_all_jobs
         
         # Count issues from results (ensure it's a clean integer)
-        total_issues=$(grep -c "⚠️\|🚨\|THREAT\|CRITICAL" "$BLUETEAM_RESULTS" 2>/dev/null | tr -d ' \n' || echo "0")
+        total_issues=$( (grep -c "⚠️\|🚨\|THREAT\|CRITICAL" "$BLUETEAM_RESULTS" 2>/dev/null | tr -d ' \n' || echo "0") | head -1)
         total_issues=${total_issues:-0}
         
         # Always show results if there are issues, or if verbose mode

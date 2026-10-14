@@ -91,7 +91,7 @@ get_file_info() {
     local cached=""
     
     if [ "$HAS_ASSOC_ARRAYS" = true ]; then
-        cached="${FILE_CACHE[$file]}"
+        cached="${FILE_CACHE[$file]:-}"
     else
         # Fallback: grep cache file
         cached=$(grep "^$file|" "$CACHE_FILE" 2>/dev/null | cut -d'|' -f2- || echo "")
@@ -129,6 +129,7 @@ incremental_hash() {
     local target_dir="$1"
     local baseline_file="$2"
     local output_file="$3"
+    local exclude_dir="${4:-}"
     
     # Load baseline for lookup
     if [ "$HAS_ASSOC_ARRAYS" = true ]; then
@@ -149,6 +150,9 @@ incremental_hash() {
         if [ ! -f "$file" ] || [ ! -r "$file" ]; then
             continue
         fi
+        if [ -n "$exclude_dir" ] && [[ "$file" == "$exclude_dir"/* ]]; then
+            continue
+        fi
         
         local cached_info=$(get_file_info "$file")
         local current_mtime=$(echo "$cached_info" | cut -d'|' -f1)
@@ -156,7 +160,7 @@ incremental_hash() {
         
         local baseline_hash=""
         if [ "$HAS_ASSOC_ARRAYS" = true ]; then
-            baseline_hash="${baseline_hashes[$file]}"
+            baseline_hash="${baseline_hashes[$file]:-}"
         else
             # Fallback: grep baseline file
             baseline_hash=$(grep "  $file$" "$baseline_file" 2>/dev/null | awk '{print $1}' || echo "")
@@ -774,4 +778,3 @@ cleanup_algorithms() {
     flush_buffer ""
     clear_memo_cache
 }
-

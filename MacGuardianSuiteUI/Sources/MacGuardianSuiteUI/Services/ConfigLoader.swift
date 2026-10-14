@@ -24,14 +24,14 @@ final class ConfigLoader: ObservableObject {
         try? FileManager.default.createDirectory(at: macGuardianURL, withIntermediateDirectories: true)
         
         // Migrate existing config from old location if it exists
-        let oldPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/config/config.yaml"
+        let oldPath = "\(RepoLocator.path)/MacGuardianSuite/config/config.yaml"
         if FileManager.default.fileExists(atPath: oldPath) && !FileManager.default.fileExists(atPath: configURL.path) {
             try? FileManager.default.copyItem(atPath: oldPath, toPath: configURL.path)
         }
         
         // Fallback to default config in project if user config doesn't exist
         if !FileManager.default.fileExists(atPath: configURL.path) {
-            let defaultPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/config/config.yaml"
+            let defaultPath = "\(RepoLocator.path)/MacGuardianSuite/config/config.yaml"
             if FileManager.default.fileExists(atPath: defaultPath) {
                 try? FileManager.default.copyItem(atPath: defaultPath, toPath: configURL.path)
             }

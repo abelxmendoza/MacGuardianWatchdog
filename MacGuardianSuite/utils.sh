@@ -393,7 +393,7 @@ check_network_connections() {
     if command -v lsof &> /dev/null; then
         # Cache lsof output to avoid multiple calls
         local lsof_output=$(lsof -i -P -n 2>/dev/null)
-        local conn_count=$(echo "$lsof_output" | grep -c ESTABLISHED || echo "0")
+        local conn_count=$( (echo "$lsof_output" | grep -c ESTABLISHED || echo "0") | head -1)
         info "Active network connections: $conn_count (metadata only, no content inspection)"
         
         # Use optimized pattern matching

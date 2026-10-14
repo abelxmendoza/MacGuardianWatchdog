@@ -174,7 +174,7 @@ struct SSHSecurityView: View {
     private func runAudit() {
         isLoading = true
         DispatchQueue.global(qos: .userInitiated).async {
-            let scriptPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/auditors/ssh_auditor.sh"
+            let scriptPath = "\(RepoLocator.path)/MacGuardianSuite/auditors/ssh_auditor.sh"
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
             process.arguments = [scriptPath, "audit"]
@@ -241,7 +241,7 @@ struct SSHSecurityView: View {
     }
     
     private func updateBaseline() {
-        let scriptPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/auditors/ssh_auditor.sh"
+        let scriptPath = "\(RepoLocator.path)/MacGuardianSuite/auditors/ssh_auditor.sh"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = [scriptPath, "baseline"]

@@ -9,7 +9,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-TEST_INSTALL_ROOT="/tmp/macguardian_test_install"
+TEST_INSTALL_ROOT="$(mktemp -d)/macguardian_test_install"
+
+# Run against a throwaway home folder: this test creates and deletes
+# ~/.macguardian, which must never be the user's real data.
+export HOME="$(mktemp -d)"
 
 # Colors
 GREEN='\033[0;32m'
@@ -20,8 +24,10 @@ NC='\033[0m'
 # Cleanup function
 cleanup() {
     echo "Cleaning up test installation..."
-    rm -rf "$TEST_INSTALL_ROOT" 2>/dev/null || true
-    rm -rf "$HOME/.macguardian" 2>/dev/null || true
+    rm -rf "$(dirname "$TEST_INSTALL_ROOT")" 2>/dev/null || true
+    case "$HOME" in
+        "${TMPDIR:-/tmp}"*|/tmp/*|/private/*) rm -rf "$HOME" 2>/dev/null || true ;;
+    esac
 }
 
 trap cleanup EXIT

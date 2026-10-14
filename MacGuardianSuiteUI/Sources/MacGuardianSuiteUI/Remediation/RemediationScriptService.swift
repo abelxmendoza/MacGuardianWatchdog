@@ -23,7 +23,7 @@ class RemediationScriptService {
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_remediation.sh --preview-json 2>&1"]
+                process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_remediation.sh --preview-all 2>&1"]
                 
                 let pipe = Pipe()
                 process.standardOutput = pipe
@@ -69,11 +69,17 @@ class RemediationScriptService {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/zsh")
 
-                var args = ["--apply"]
-                if dryRun {
-                    args.append("--dry-run")
+                // Each action is one fix category; --only runs exactly that
+                // category, and --execute -y applies it (the app already asked
+                // for confirmation). Without --execute it stays a dry run.
+                guard let category = action.category, Self.categories.contains(category) else {
+                    continuation.resume(returning: (false, "Unknown remediation action"))
+                    return
                 }
-                args.append(action.fixCommand)
+                var args = ["--only", category]
+                if !dryRun {
+                    args = ["--execute", "-y"] + args
+                }
                 let quotedArgs = args.map { $0.shellQuoted }.joined(separator: " ")
 
                 process.arguments = ["-c", "cd \(scriptDir.shellQuoted) && ./mac_remediation.sh \(quotedArgs) 2>&1"]
@@ -89,8 +95,12 @@ class RemediationScriptService {
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     let output = String(data: data, encoding: .utf8) ?? ""
                     
-                    let success = process.terminationStatus == 0
-                    let message = output.isEmpty ? (success ? "Remediation applied successfully" : "Remediation failed") : output
+                    // Only report success when the script says it actually ran
+                    // in execution mode, never for a preview.
+                    let ran = dryRun ? output.contains("Remediation Preview Complete")
+                                     : output.contains("Remediation Complete") && !output.contains("DRY-RUN MODE")
+                    let success = process.terminationStatus == 0 && ran
+                    let message = output.isEmpty ? (success ? "Remediation applied" : "Remediation failed") : output
                     
                     continuation.resume(returning: (success, message))
                 } catch {
@@ -130,61 +140,48 @@ class RemediationScriptService {
         return actions
     }
     
+    static let categories: Set<String> = ["permissions", "disk", "processes", "launch"]
+
+    /// Groups the dry run's "Would ..." lines into one action per fix category.
     private func parseActionsFromText(_ text: String) -> [RemediationAction] {
-        var actions: [RemediationAction] = []
-        let lines = text.components(separatedBy: .newlines)
-        
-        var currentAction: (name: String, description: String, command: String)? = nil
-        
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            if trimmed.isEmpty { continue }
-            
-            // Look for action indicators
-            if trimmed.contains("Action:") || trimmed.contains("Fix:") || trimmed.hasPrefix("•") {
-                if let action = currentAction {
-                    actions.append(RemediationAction(
-                        name: action.name,
-                        impact: "medium",
-                        description: action.description,
-                        fixCommand: action.command
-                    ))
-                }
-                
-                let name = trimmed
-                    .replacingOccurrences(of: "Action:", with: "")
-                    .replacingOccurrences(of: "Fix:", with: "")
-                    .replacingOccurrences(of: "•", with: "")
-                    .trimmingCharacters(in: .whitespaces)
-                
-                currentAction = (name: name, description: "", command: "")
-            } else if trimmed.contains("Command:") || trimmed.contains("cmd:") {
-                if let action = currentAction {
-                    let command = trimmed
-                        .replacingOccurrences(of: "Command:", with: "")
-                        .replacingOccurrences(of: "cmd:", with: "")
-                        .trimmingCharacters(in: .whitespaces)
-                    currentAction = (name: action.name, description: action.description, command: command)
-                }
-            } else if var action = currentAction {
-                // Append to description
-                let desc = action.description.isEmpty ? trimmed : action.description + " " + trimmed
-                currentAction = (name: action.name, description: desc, command: action.command)
+        var found: [String: [String]] = [:]
+        for line in text.components(separatedBy: .newlines) {
+            let trimmed = line.replacingOccurrences(of: "ℹ️", with: "").trimmingCharacters(in: .whitespaces)
+            let rules: [(prefix: String, category: String)] = [
+                ("Would fix:", "permissions"), ("Would clean:", "disk"), ("Would run: brew cleanup", "disk"),
+                ("Would kill:", "processes"), ("Would remove:", "launch")
+            ]
+            for rule in rules where trimmed.hasPrefix(rule.prefix) {
+                let detail = trimmed.dropFirst(rule.prefix.hasPrefix("Would run") ? 6 : rule.prefix.count)
+                found[rule.category, default: []].append(detail.trimmingCharacters(in: .whitespaces))
             }
         }
-        
-        // Add last action
-        if let action = currentAction {
-            actions.append(RemediationAction(
-                name: action.name,
-                impact: "medium",
-                description: action.description,
-                fixCommand: action.command
-            ))
+
+        func make(_ category: String, name: String, impact: String, risk: String, intro: String) -> RemediationAction? {
+            guard let items = found[category], !items.isEmpty else { return nil }
+            let list = items.prefix(8).map { "• \($0)" }.joined(separator: "\n")
+            let more = items.count > 8 ? "\n…and \(items.count - 8) more" : ""
+            return RemediationAction(
+                name: name.replacingOccurrences(of: "{n}", with: "\(items.count)"),
+                impact: impact,
+                description: intro + "\n" + list + more,
+                fixCommand: "mac_remediation.sh --execute --only \(category)",
+                category: category,
+                requiresConfirmation: true,
+                riskLevel: risk
+            )
         }
-        
-        return actions
+
+        return [
+            make("permissions", name: "Fix {n} file(s) anyone can modify", impact: "medium", risk: "low",
+                 intro: "Removes world-write permission from these files in Documents, Desktop and ~/.ssh (original permissions are backed up):"),
+            make("disk", name: "Clean old cache files", impact: "low", risk: "low",
+                 intro: "Deletes cache files older than 30 days from these locations and runs brew cleanup:"),
+            make("processes", name: "Stop {n} suspicious process(es)", impact: "high", risk: "high",
+                 intro: "Ends these unsigned processes whose names match known malware patterns. Check each one first:"),
+            make("launch", name: "Quarantine {n} suspicious startup item(s)", impact: "high", risk: "medium",
+                 intro: "Moves these launch agents to quarantine so they no longer start at login (restorable):")
+        ].compactMap { $0 }
     }
 }
 

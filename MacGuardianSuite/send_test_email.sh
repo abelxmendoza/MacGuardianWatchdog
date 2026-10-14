@@ -16,7 +16,11 @@ if [ -z "${SMTP_USERNAME:-}" ] || [ -z "${SMTP_PASSWORD:-}" ]; then
     fi
 fi
 
-REPORT_EMAIL="${REPORT_EMAIL:-abelxmendoza@gmail.com}"
+REPORT_EMAIL="${REPORT_EMAIL:-$(sed -n 's/^REPORT_EMAIL="\([^"]*\)".*/\1/p' "$HOME/.macguardian/config.conf" 2>/dev/null | tail -1)}"
+if [ -z "$REPORT_EMAIL" ]; then
+    echo "No report address set. Add REPORT_EMAIL=\"you@example.com\" to ~/.macguardian/config.conf." >&2
+    exit 1
+fi
 REPORT_DIR="${REPORT_DIR:-$HOME/.macguardian/reports}"
 mkdir -p "$REPORT_DIR"
 

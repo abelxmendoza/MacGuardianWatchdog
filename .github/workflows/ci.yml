@@ -25,7 +25,7 @@ jobs:
             head -1 "$script" | grep -q 'env bats' && continue
             echo "Checking: $script"
             bash -n "$script" || exit 1
-          done < <(find MacGuardianSuite -name "*.sh" -type f)
+          done < <(find MacGuardianSuite -name "*.sh" -type f; ls install.sh uninstall.sh mac_suite.sh "Install MacGuardian.command" MacGuardianSuiteUI/build_app.sh)
           echo "✅ All bash scripts passed syntax validation"
 
       - name: Validate Python scripts
@@ -100,6 +100,9 @@ jobs:
         run: |
           cd MacGuardianSuite/tests
           bash run_all_tests.sh
+
+      - name: Run self-check tests
+        run: bash MacGuardianSuite/tests/test_self_check.sh
       
       - name: Upload test results
         if: always()
@@ -141,36 +144,42 @@ jobs:
           cd MacGuardianSuite/tests
           bash security/test_input_injection.sh
       
-      - name: Check for secrets
+      - name: Check for committed secrets
         run: |
-          echo "Checking for accidentally committed secrets..."
-          if grep -r "password\|secret\|api_key\|token" MacGuardianSuite --include="*.sh" --include="*.py" | grep -v "test\|example\|placeholder"; then
-            echo "⚠️ Potential secrets found - please review"
+          # Look for real credential material (cloud keys, private keys,
+          # tokens, hard-coded password values) - not just the word
+          # "password", which appears in normal messages and docs.
+          pattern='AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{60,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-(ant-)?[A-Za-z0-9_-]{32,}|(password|passwd|secret|api_key|apikey|token)[A-Za-z_]*["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"'][^"'"'"'$[:space:]{}<>]{8,}["'"'"']'
+          if git grep -nIiE "$pattern" -- . ':!*.md' ':!MacGuardianSuite/tests/**' ':!tests/**' \
+              | grep -viE "your[-_ ]|example|placeholder|changeme|<[a-z_-]+>"; then
+            echo "❌ Possible secret committed - see above"
             exit 1
           fi
+          echo "✅ No secrets found"
 
   build-check:
     name: Build Check
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
-      
-      - name: Build SwiftUI app
+
+      - name: Build and package the app
+        run: SKIP_INSTALL=1 ./MacGuardianSuiteUI/build_app.sh
+
+      - name: Verify the packaged app
         run: |
-          if [ -d "MacGuardianSuiteUI" ]; then
-            cd MacGuardianSuiteUI
-            xcodebuild -scheme MacGuardianSuiteUI -configuration Debug clean build
-          else
-            echo "⚠️ SwiftUI project not found, skipping build"
-          fi
-        continue-on-error: true
+          APP="MacGuardianSuiteUI/.build/MacGuardian Suite.app"
+          codesign --verify --deep --strict "$APP"
+          linked="$(/usr/libexec/PlistBuddy -c 'Print :MGRepositoryPath' "$APP/Contents/Info.plist")"
+          [ "$linked" = "$GITHUB_WORKSPACE" ] || { echo "App points at '$linked'"; exit 1; }
+          echo "✅ App built, signed and linked to its scripts"
 
   lint:
     name: Code Linting
@@ -195,7 +204,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: macos-latest
-    needs: [syntax-check, functional-tests, e2e-tests, security-scan]
+    needs: [syntax-check, functional-tests, e2e-tests, security-scan, build-check]
     if: always()
     
     steps:
@@ -219,6 +228,7 @@ jobs:
           check "Functional Tests" "${{ needs.functional-tests.result }}"
           check "E2E Tests" "${{ needs.e2e-tests.result }}"
           check "Security Tests" "${{ needs.security-scan.result }}"
+          check "App Build" "${{ needs.build-check.result }}"
 
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "$overall" -eq 0 ]; then

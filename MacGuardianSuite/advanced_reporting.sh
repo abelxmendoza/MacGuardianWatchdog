@@ -258,7 +258,7 @@ get_security_score() {
 get_total_issues() {
     # Count from error database
     if [ -f "$HOME/.macguardian/errors.jsonl" ]; then
-        grep -c '"status": "unresolved"' "$HOME/.macguardian/errors.jsonl" 2>/dev/null || echo "0"
+        { grep -c '"status": "unresolved"' "$HOME/.macguardian/errors.jsonl" 2>/dev/null || echo "0"; } | head -1
     else
         echo "0"
     fi
@@ -267,7 +267,7 @@ get_total_issues() {
 get_fixed_issues() {
     # Count resolved issues
     if [ -f "$HOME/.macguardian/errors.jsonl" ]; then
-        grep -c '"status": "resolved"' "$HOME/.macguardian/errors.jsonl" 2>/dev/null || echo "0"
+        { grep -c '"status": "resolved"' "$HOME/.macguardian/errors.jsonl" 2>/dev/null || echo "0"; } | head -1
     else
         echo "0"
     fi

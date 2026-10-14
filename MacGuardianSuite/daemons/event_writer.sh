@@ -73,6 +73,11 @@ write_event() {
         context_json="{\"raw_message\": \"$escaped_context\"}"
     fi
     
+    # Escape any backslash that isn't already a valid JSON escape (lsof, for
+    # one, prints spaces in process names as "\x20"), so one odd value can't
+    # make the whole event unreadable.
+    context_json=$(printf '%s' "$context_json" | perl -pe 's/\\(.)/index(q{"\\\/bfnrtu}, $1) >= 0 ? "\\$1" : "\\\\$1"/ge')
+
     # Create event file
     local file="$EVENT_DIR/event_${event_id}.json"
     

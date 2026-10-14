@@ -254,7 +254,7 @@ struct PrivacyHeatmapView: View {
     private func runAudit() {
         isLoading = true
         DispatchQueue.global(qos: .userInitiated).async {
-            let scriptPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite/privacy/tcc_auditor.sh"
+            let scriptPath = "\(RepoLocator.path)/MacGuardianSuite/privacy/tcc_auditor.sh"
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
             process.arguments = [scriptPath, "audit"]

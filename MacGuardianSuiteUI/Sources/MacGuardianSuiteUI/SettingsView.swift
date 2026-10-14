@@ -103,18 +103,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Safety Settings
-                SettingsSection(title: "Safety Settings", icon: "shield.checkered") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Safe Mode", isOn: $workspace.safeMode)
-                            .help("Requires confirmation for potentially dangerous operations")
-                        
-                        Text("When enabled, you'll be asked to confirm before running scripts that may modify files or system settings.")
-                            .font(.caption)
-                            .foregroundColor(.themeTextSecondary)
-                    }
-                }
-                
                 // Repository Settings
                 SettingsSection(title: "Repository", icon: "folder.fill") {
                     VStack(alignment: .leading, spacing: 16) {

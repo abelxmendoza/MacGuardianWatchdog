@@ -151,9 +151,7 @@ struct FixAppIconsView: View {
         isLoading = true
         
         DispatchQueue.global(qos: .userInitiated).async {
-            let scriptPath = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Desktop")
-                .appendingPathComponent("MacGuardianProject")
+            let scriptPath = URL(fileURLWithPath: RepoLocator.path)
                 .appendingPathComponent("MacGuardianSuite")
                 .appendingPathComponent("fix_app_icons.sh")
                 .path
@@ -184,9 +182,7 @@ struct FixAppIconsView: View {
             // Fix MacGuardian icon if requested
             var appPathToFix: String? = nil
             if fixMacGuardianIcon {
-                let appPath = FileManager.default.homeDirectoryForCurrentUser
-                    .appendingPathComponent("Desktop")
-                    .appendingPathComponent("MacGuardianProject")
+                let appPath = URL(fileURLWithPath: RepoLocator.path)
                     .appendingPathComponent("MacGuardianSuiteUI")
                     .appendingPathComponent(".build")
                     .appendingPathComponent("MacGuardian Suite.app")
@@ -196,9 +192,7 @@ struct FixAppIconsView: View {
                     appPathToFix = appPath
                     
                     // Also run set_app_icon.sh for more comprehensive icon setting
-                    let setIconScriptPath = FileManager.default.homeDirectoryForCurrentUser
-                        .appendingPathComponent("Desktop")
-                        .appendingPathComponent("MacGuardianProject")
+                    let setIconScriptPath = URL(fileURLWithPath: RepoLocator.path)
                         .appendingPathComponent("MacGuardianSuiteUI")
                         .appendingPathComponent("set_app_icon.sh")
                         .path
@@ -241,9 +235,7 @@ struct FixResult: Identifiable {
 
 #if os(macOS)
 func runFixAppIconsScript(args: [String], appPath: String?) -> (success: Bool, message: String) {
-    let scriptPath = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Desktop")
-        .appendingPathComponent("MacGuardianProject")
+    let scriptPath = URL(fileURLWithPath: RepoLocator.path)
         .appendingPathComponent("MacGuardianSuite")
         .appendingPathComponent("fix_app_icons.sh")
         .path
@@ -255,7 +247,7 @@ func runFixAppIconsScript(args: [String], appPath: String?) -> (success: Bool, m
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
 
-    let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuite"
+    let scriptDir = "\(RepoLocator.path)/MacGuardianSuite"
     var command = "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted)"
 
     // Add regular arguments (fixed flags from the UI, but quoted regardless)
@@ -299,7 +291,7 @@ func runSetAppIconScript(scriptPath: String) -> (success: Bool, message: String)
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
     
-    let scriptDir = "\(FileManager.default.homeDirectoryForCurrentUser.path)/Desktop/MacGuardianProject/MacGuardianSuiteUI"
+    let scriptDir = "\(RepoLocator.path)/MacGuardianSuiteUI"
     let command = "cd \(scriptDir.shellQuoted) && bash \(scriptPath.shellQuoted)"
     process.arguments = ["-c", command]
     

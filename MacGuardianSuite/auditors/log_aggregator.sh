@@ -51,21 +51,21 @@ parse_security_events() {
     
     # Check for failed SSH login attempts
     if command -v log &> /dev/null; then
-        local failed_ssh=$(log show --last "${hours}h" --predicate 'process == "sshd" AND eventMessage CONTAINS "Failed"' 2>/dev/null | grep -i "failed" | wc -l | tr -d ' ' || echo "0")
+        local failed_ssh=$( (log show --last "${hours}h" --predicate 'process == "sshd" AND eventMessage CONTAINS "Failed"' 2>/dev/null | grep -i "failed" | wc -l | tr -d ' ' || echo "0") | head -1)
         if [ "$failed_ssh" -gt 0 ]; then
             local context_json="{\"event_type\": \"ssh_login_failure\", \"count\": $failed_ssh, \"time_window_hours\": $hours}"
             write_event "ids_alert" "medium" "log_aggregator" "$context_json"
         fi
         
         # Check for sudo privilege escalations
-        local sudo_events=$(log show --last "${hours}h" --predicate 'process == "sudo"' 2>/dev/null | grep -i "sudo" | wc -l | tr -d ' ' || echo "0")
+        local sudo_events=$( (log show --last "${hours}h" --predicate 'process == "sudo"' 2>/dev/null | grep -i "sudo" | wc -l | tr -d ' ' || echo "0") | head -1)
         if [ "$sudo_events" -gt 10 ]; then
             local context_json="{\"event_type\": \"sudo_escalation\", \"count\": $sudo_events, \"time_window_hours\": $hours}"
             write_event "ids_alert" "medium" "log_aggregator" "$context_json"
         fi
         
         # Check for kernel panics
-        local panics=$(log show --last "${hours}h" --predicate 'process == "kernel" AND eventMessage CONTAINS "panic"' 2>/dev/null | grep -i "panic" | wc -l | tr -d ' ' || echo "0")
+        local panics=$( (log show --last "${hours}h" --predicate 'process == "kernel" AND eventMessage CONTAINS "panic"' 2>/dev/null | grep -i "panic" | wc -l | tr -d ' ' || echo "0") | head -1)
         if [ "$panics" -gt 0 ]; then
             local context_json="{\"event_type\": \"kernel_panic\", \"count\": $panics, \"time_window_hours\": $hours}"
             write_event "ids_alert" "high" "log_aggregator" "$context_json"

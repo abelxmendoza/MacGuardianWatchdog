@@ -9,6 +9,7 @@ struct ReportsView: View {
     @State private var reports: [ReportFile] = []
     @State private var selectedReport: ReportFile?
     @State private var searchText: String = ""
+    @StateObject private var generator = ScriptRunner()
     
     var body: some View {
         HSplitView {
@@ -27,6 +28,23 @@ struct ReportsView: View {
                         .foregroundColor(Color(red: 0.54, green: 0.16, blue: 0.95))
                 }
                     Spacer()
+                    Button {
+                        generator.run(scriptPath: "MacGuardianSuite/scheduled_reports.sh",
+                                      repositoryPath: workspace.repositoryPath) {
+                            selectedReport = nil
+                            refreshReports()
+                        }
+                    } label: {
+                        if generator.isRunning {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Label("Generate", systemImage: "doc.badge.plus")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color(red: 0.54, green: 0.16, blue: 0.95))
+                    .disabled(generator.isRunning)
+                    .help("Create a new security report now")
                     Button {
                         refreshReports()
                     } label: {

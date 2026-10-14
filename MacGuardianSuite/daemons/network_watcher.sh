@@ -108,7 +108,8 @@ function detect_network_anomalies() {
     if [ -n "$listening" ]; then
         echo "$listening" | while IFS= read -r line; do
             local listen_port=$(echo "$line" | grep -oE ':[0-9]+' | head -1 | tr -d ':' || echo "")
-            local listen_process=$(echo "$line" | awk '{print $1}' || echo "")
+            # lsof writes spaces in command names as "\x20"
+            local listen_process=$(echo "$line" | awk '{print $1}' | sed 's/\\x20/ /g' || echo "")
             
             # Alert on unexpected listening ports
             if [ -n "$listen_port" ] && [ "$listen_port" -gt 1024 ] && [ "$listen_port" -lt 65535 ]; then
@@ -117,6 +118,15 @@ function detect_network_anomalies() {
                     continue
                 fi
                 
+                # Report each process/port pair once, not on every 2-second
+                # loop - otherwise one dev server floods the timeline.
+                local seen_file="$HOME/.macguardian/.listening_ports_seen"
+                local seen_key="$listen_process:$listen_port"
+                if grep -qxF "$seen_key" "$seen_file" 2>/dev/null; then
+                    continue
+                fi
+                echo "$seen_key" >> "$seen_file"
+
                 local context_json="{\"local_port\": $listen_port, \"process_name\": \"$listen_process\", \"protocol\": \"tcp\", \"connection_state\": \"LISTEN\", \"suspicious_pattern\": \"unexpected_listening_port\"}"
                 write_event "network_connection" "medium" "network_watcher" "$context_json"
                 log_watcher "network_watcher" "INFO" "Unexpected listening port: $listen_process on $listen_port"

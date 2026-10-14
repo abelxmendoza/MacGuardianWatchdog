@@ -174,7 +174,7 @@ audit_ssh() {
     
     # Check for failed SSH login attempts
     if command -v log &> /dev/null; then
-        local failed_logins=$(log show --predicate 'process == "sshd"' --last 1h 2>/dev/null | grep -i "failed\|invalid\|authentication failure" | wc -l | tr -d ' ' || echo "0")
+        local failed_logins=$( (log show --predicate 'process == "sshd"' --last 1h 2>/dev/null | grep -i "failed\|invalid\|authentication failure" | wc -l | tr -d ' ' || echo "0") | head -1)
         if [ "$failed_logins" -gt 0 ]; then
             issues=$((issues + 1))
             
