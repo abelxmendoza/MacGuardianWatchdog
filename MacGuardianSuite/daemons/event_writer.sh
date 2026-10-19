@@ -44,7 +44,8 @@ write_event() {
     # Generate event_id (UUID v4)
     local event_id
     if command -v uuidgen &> /dev/null; then
-        event_id=$(uuidgen)
+        # uuidgen prints uppercase; Event Spec (and validate_uuid) want lowercase
+        event_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
     else
         # Fallback: generate UUID-like string
         event_id=$(od -x /dev/urandom | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}' | tr '[:upper:]' '[:lower:]')
@@ -53,7 +54,9 @@ write_event() {
     # Validate UUID format
     if ! validate_uuid "$event_id"; then
         # Generate simpler UUID if validation fails
-        event_id="$(date +%s)-$(shasum -a 256 <<< "$event_type$severity$source_module" | cut -c1-32)"
+        # Include randomness so two events of the same type and severity in
+        # the same second don't get the same file name and overwrite each other.
+        event_id="$(date +%s)-$(shasum -a 256 <<< "$event_type$severity$source_module$$$RANDOM$RANDOM" | cut -c1-32)"
     fi
     
     # Generate timestamp (ISO8601 UTC)

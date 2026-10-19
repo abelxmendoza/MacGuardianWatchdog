@@ -12,7 +12,8 @@ MacGuardianSuite/daemons/
 ├── event_writer.sh            # JSON event writer
 ├── fsevents_watcher.sh        # File system change detection
 ├── process_watcher.sh         # Process anomaly detection
-└── network_watcher.sh         # Network connection monitoring
+├── network_watcher.sh         # Network connection monitoring
+└── persistence_watcher.sh     # Startup item and code-signing monitoring
 ```
 
 ## Features
@@ -35,6 +36,13 @@ MacGuardianSuite/daemons/
 - Checks connections against threat intelligence database
 - Identifies unexpected listening ports
 - Detects suspicious internal network connections
+
+### Real-Time Persistence Monitoring
+- Watches LaunchAgents, LaunchDaemons, StartupItems and shell profiles (`~/.zshrc`, `/etc/zprofile`, ...)
+- Checks the code signature of whatever each item runs (Apple, Developer ID, App Store, ad-hoc, unsigned, invalid, missing)
+- Raises `persistence_change` events for added, modified and removed items; unsigned programs, hidden or temporary locations and download-and-run commands are `high`, and `critical` for LaunchDaemons (root)
+- Only runs the full codesign pass when a watched file or program actually changed
+- `persistence_watcher.sh scan` lists every startup item with its signer, like KnockKnock
 
 ## Installation
 

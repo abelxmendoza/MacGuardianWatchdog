@@ -173,7 +173,7 @@ validate_severity() {
 
 validate_event_type() {
     local event_type="$1"
-    local valid_types="process_anomaly|network_connection|dns_request|file_integrity_change|cron_modification|ssh_key_change|tcc_permission_change|user_account_change|signature_hit|ids_alert|privacy_event|ransomware_activity|config_change"
+    local valid_types="process_anomaly|network_connection|dns_request|file_integrity_change|cron_modification|ssh_key_change|tcc_permission_change|user_account_change|signature_hit|ids_alert|privacy_event|ransomware_activity|persistence_change|config_change"
     
     validate_enum "$event_type" "$valid_types"
 }

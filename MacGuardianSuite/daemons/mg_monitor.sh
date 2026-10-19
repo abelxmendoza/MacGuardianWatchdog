@@ -79,6 +79,11 @@ source "$MONITOR_DIR/network_watcher.sh" 2>/dev/null || {
     exit 1
 }
 
+source "$MONITOR_DIR/persistence_watcher.sh" 2>/dev/null || {
+    log_realtime "Failed to load persistence_watcher.sh" "ERROR"
+    exit 1
+}
+
 # Source IDS engine if available
 if [ -f "$SUITE_DIR/detectors/ids_engine.sh" ]; then
     source "$SUITE_DIR/detectors/ids_engine.sh" 2>/dev/null || true
@@ -130,6 +135,13 @@ while true; do
         fi
     done
     
+    # New, changed or removed startup items (checked every minute)
+    detect_persistence_changes 2>&1 | while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            log_realtime "Persistence: $line" "WARNING"
+        fi
+    done
+
     # Run IDS correlation engine periodically
     if [ $((CURRENT_TIME - LAST_IDS_CHECK)) -ge $IDS_CHECK_INTERVAL ]; then
         if type run_ids_correlation &> /dev/null; then

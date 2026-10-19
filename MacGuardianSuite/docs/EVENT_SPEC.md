@@ -50,6 +50,7 @@ All events MUST be valid JSON objects with the following structure:
   - `ids_alert`
   - `privacy_event`
   - `ransomware_activity`
+  - `persistence_change`
   - `config_change`
 - **Example**: `"process_anomaly"`
 
@@ -148,6 +149,32 @@ All events MUST be valid JSON objects with the following structure:
   }
 }
 ```
+
+### persistence_change
+
+A startup item (LaunchAgent, LaunchDaemon, StartupItem or shell profile) was added, modified or removed. Written by `persistence_watcher`, which also checks the code signature of the program the item runs.
+
+```json
+{
+  "event_id": "...",
+  "event_type": "persistence_change",
+  "severity": "high",
+  "timestamp": "...",
+  "source": "persistence_watcher",
+  "context": {
+    "change_type": "added|modified|removed",
+    "item_kind": "launchd|startupitem|profile",
+    "path": "/Users/me/Library/LaunchAgents/com.example.agent.plist",
+    "executable": "/Users/Shared/.hidden/agent",
+    "signature_status": "apple|developer_id|app_store|adhoc|unsigned|invalid|missing|script|none",
+    "signer": "Example Inc. (ABCDE12345)",
+    "command": "/Users/Shared/.hidden/agent --daemon",
+    "reasons": "program is unsigned; runs from a temporary, shared or hidden location"
+  }
+}
+```
+
+Severity: `low` for removals and items signed by a known developer; `medium` for scripts, ad-hoc signed Homebrew programs, missing programs and shell profile edits; `high` for unsigned, ad-hoc or invalid programs, risky locations, or commands that download or run inline code; `critical` when a `high` item is a LaunchDaemon (runs as root).
 
 ### cron_modification
 

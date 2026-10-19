@@ -128,7 +128,8 @@ class EventBus:
             'process_anomaly', 'network_connection', 'dns_request',
             'file_integrity_change', 'cron_modification', 'ssh_key_change',
             'tcc_permission_change', 'user_account_change', 'signature_hit',
-            'ids_alert', 'privacy_event', 'ransomware_activity', 'config_change'
+            'ids_alert', 'privacy_event', 'ransomware_activity', 'persistence_change',
+            'config_change'
         ]
         if event_type not in valid_types:
             return False
@@ -159,6 +160,7 @@ class EventBus:
             'tcc_permission_change': 'tcc_auditor',
             'privacy_event': 'tcc_auditor',
             'ransomware_activity': 'ransomware_detector',
+            'persistence_change': 'persistence_watcher',
             'signature_hit': 'signature_engine',
             'config_change': 'config_manager'
         }

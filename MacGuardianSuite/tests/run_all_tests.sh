@@ -141,6 +141,11 @@ run_unit_tests() {
     if [ -f "$SCRIPT_DIR/test_package_updates.sh" ]; then
         run_test_file "$SCRIPT_DIR/test_package_updates.sh"
     fi
+
+    # Startup item (LaunchAgent/Daemon, profile) monitoring and code signing
+    if [ -f "$SCRIPT_DIR/test_persistence_watcher.sh" ]; then
+        run_test_file "$SCRIPT_DIR/test_persistence_watcher.sh"
+    fi
     
     # Manual validator tests (if bats not available)
     echo "Running manual validator tests..."
