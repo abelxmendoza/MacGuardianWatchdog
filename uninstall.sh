@@ -16,6 +16,7 @@ set -uo pipefail
 APP_PATH="/Applications/MacGuardian Suite.app"
 RUNTIME_DIR="$HOME/Library/Application Support/MacGuardian"
 DATA_DIR="$HOME/.macguardian"
+CLI_PATH="$HOME/.local/bin/macguardian"
 USER_DOMAIN="gui/$(id -u)"
 
 REMOVE_DATA=false
@@ -36,6 +37,11 @@ done
 if [ -d "$APP_PATH" ]; then
     rm -rf "$APP_PATH"
     echo "  ✔ Removed $APP_PATH"
+fi
+
+if [ -L "$CLI_PATH" ] && [[ "$(readlink "$CLI_PATH")" == */macguardian ]]; then
+    rm -f "$CLI_PATH"
+    echo "  ✔ Removed Terminal command $CLI_PATH"
 fi
 
 # Settings the app saved (repository path, last audit score).

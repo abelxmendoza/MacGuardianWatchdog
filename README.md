@@ -163,8 +163,9 @@ Not shown in the app: its anomaly scores are still noisy.
 ./MacGuardianSuite/scheduled_reports.sh daily
 
 # Software maintenance (also available from Dashboard)
-./MacGuardianSuite/package_updates.sh update
-./MacGuardianSuite/package_updates.sh upgrade --install-mas
+macguardian update
+macguardian upgrade
+macguardian all
 
 # Set up launchd automation
 ./MacGuardianSuite/install_scheduler.sh

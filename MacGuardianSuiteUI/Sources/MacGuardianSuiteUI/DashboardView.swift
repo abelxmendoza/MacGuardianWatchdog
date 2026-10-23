@@ -306,6 +306,11 @@ struct SoftwareUpdatesCard: View {
             Text("Apps installed directly from vendor websites remain with their own built-in updater.")
                 .font(.caption2)
                 .foregroundColor(.themeTextSecondary)
+
+            Text("Terminal: macguardian update  •  macguardian upgrade")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundColor(.themePurpleLight)
+                .textSelection(.enabled)
         }
         .padding()
         .background(Color.themeDarkGray, in: RoundedRectangle(cornerRadius: 12))

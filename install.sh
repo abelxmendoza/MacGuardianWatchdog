@@ -113,12 +113,24 @@ ok "Xcode $(xcodebuild -version 2>/dev/null | head -1 | awk '{print $2}')"
 step "Preparing scripts and data folder"
 
 find "$SUITE_DIR" -name "*.sh" -exec chmod +x {} +
-chmod +x "$PROJECT_ROOT/mac_suite.sh" "$UI_DIR/build_app.sh"
+chmod +x "$PROJECT_ROOT/mac_suite.sh" "$PROJECT_ROOT/macguardian" "$UI_DIR/build_app.sh"
 ok "Scripts are executable"
 
 mkdir -p "$DATA_DIR"/{logs,reports,baselines,events,audits}
 chmod 700 "$DATA_DIR"
 ok "Data folder ready at $DATA_DIR"
+
+# Install a short command in the user's existing command directory. The
+# symlink lets a git checkout receive updates without reinstalling the CLI.
+CLI_DIR="$HOME/.local/bin"
+CLI_PATH="$CLI_DIR/macguardian"
+mkdir -p "$CLI_DIR"
+ln -sfn "$PROJECT_ROOT/macguardian" "$CLI_PATH"
+if [[ ":$PATH:" == *":$CLI_DIR:"* ]]; then
+    ok "Terminal command installed: macguardian"
+else
+    warn "Installed $CLI_PATH; add $CLI_DIR to PATH to run 'macguardian' anywhere"
+fi
 
 # --- Optional scanners --------------------------------------------------------
 if [ "$INSTALL_DEPS" = true ]; then
@@ -240,6 +252,7 @@ else
     echo "${yellow}${bold}⚠  MacGuardian is installed, but the self-check found problems (listed above).${normal}"
 fi
 echo "   Open it from Applications, Spotlight or the Dock."
+echo "   Terminal updates: macguardian update | macguardian upgrade"
 if [ -d "$PROJECT_ROOT/.git" ]; then
     echo "   To update later: git pull && ./install.sh"
 else

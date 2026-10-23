@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Friendly command-line entry point for MacGuardian.
+
+set -uo pipefail
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    SOURCE_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    LINK_TARGET="$(readlink "$SOURCE")"
+    if [[ "$LINK_TARGET" = /* ]]; then
+        SOURCE="$LINK_TARGET"
+    else
+        SOURCE="$SOURCE_DIR/$LINK_TARGET"
+    fi
+done
+PROJECT_ROOT="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+UPDATE_SCRIPT="$PROJECT_ROOT/MacGuardianSuite/package_updates.sh"
+
+usage() {
+    cat <<'EOF'
+MacGuardian software maintenance
+
+Usage:
+  macguardian update             Refresh catalogs and list available updates
+  macguardian upgrade [OPTIONS]  Upgrade Homebrew tools/apps and App Store apps
+  macguardian all [OPTIONS]      Refresh catalogs, then upgrade everything
+  macguardian app                Open MacGuardian Suite
+  macguardian doctor             Run MacGuardian's self-check
+
+Upgrade options:
+  -y, --yes                      Run Homebrew upgrades without confirmation
+
+Apps installed directly from vendor websites still use their own updater.
+EOF
+}
+
+COMMAND="${1:-help}"
+[ "$#" -gt 0 ] && shift
+
+case "$COMMAND" in
+    update)
+        exec /bin/bash "$UPDATE_SCRIPT" update "$@"
+        ;;
+    upgrade|all)
+        exec /bin/bash "$UPDATE_SCRIPT" "$COMMAND" --install-mas "$@"
+        ;;
+    app)
+        exec /usr/bin/open "/Applications/MacGuardian Suite.app"
+        ;;
+    doctor)
+        exec /bin/bash "$PROJECT_ROOT/MacGuardianSuite/self_check.sh" "$@"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $COMMAND" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

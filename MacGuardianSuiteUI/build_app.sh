@@ -122,7 +122,8 @@ if [ "${SKIP_INSTALL:-0}" != "1" ]; then
         pkill -x MacGuardianSuiteUI || true
         sleep 1
     fi
-    rm -rf "$INSTALL_PATH"
+    # Update the existing bundle in place so a pinned Dock item never points
+    # at a temporarily missing application (which displays as a question mark).
     ditto "$APP_PATH" "$INSTALL_PATH"
     echo "   ✔ Installed"
 fi

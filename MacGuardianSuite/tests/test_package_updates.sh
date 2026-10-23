@@ -4,6 +4,7 @@ set -uo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT="$TESTS_DIR/../package_updates.sh"
+CLI="$TESTS_DIR/../../macguardian"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -55,6 +56,18 @@ expect_call "brew upgrade --cask --greedy --no-ask app-two"
 expect_call "mas outdated"
 expect_call "mas upgrade"
 expect_call "brew cleanup"
+
+: > "$LOG"
+PATH="$BIN:/usr/bin:/bin" bash "$CLI" update >/dev/null
+expect_call "brew update"
+expect_call "brew outdated --formula --quiet"
+expect_call "brew outdated --cask --greedy --quiet"
+
+: > "$LOG"
+PATH="$BIN:/usr/bin:/bin" bash "$CLI" upgrade --yes >/dev/null
+expect_call "brew upgrade --formula --no-ask alpha"
+expect_call "brew upgrade --cask --greedy --no-ask app-one"
+expect_call "mas upgrade"
 
 echo ""
 if [ "$failures" -gt 0 ]; then
