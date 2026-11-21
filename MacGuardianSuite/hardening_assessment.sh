@@ -102,15 +102,15 @@ check_system_hardening() {
     
     # Remote Login (SSH)
     check_item "Remote Login Disabled" \
-        "systemsetup -getremotelogin 2>/dev/null | grep -q 'Off'" \
+        "! nc -z -G 2 127.0.0.1 22 2>/dev/null" \
         "network" "medium" \
         "Disable SSH: System Settings > General > Sharing > Remote Login"
     
     # Screen Saver Password
-    check_item "Screen Saver Password" \
-        "defaults read com.apple.screensaver askForPassword 2>/dev/null | grep -q '1'" \
+    check_item "Screen Lock Password Required Immediately" \
+        "sysadminctl -screenLock status 2>&1 | grep -qE 'immediate|delay is [0-5] seconds'" \
         "user" "medium" \
-        "Enable screen saver password: System Settings > Lock Screen"
+        "System Settings > Lock Screen > Require password after screen saver begins or display is turned off: Immediately"
     
     echo ""
 }
@@ -134,7 +134,7 @@ check_network_hardening() {
     
     # AirDrop (restrict to contacts)
     check_item "AirDrop Restricted" \
-        "defaults read com.apple.sharingd DiscoverableMode 2>/dev/null | grep -q 'ContactsOnly\|Off'" \
+        'm=$(defaults read com.apple.sharingd DiscoverableMode 2>/dev/null); [ -z "$m" ] || echo "$m" | grep -qE "Contacts Only|ContactsOnly|Off"' \
         "network" "medium" \
         "Restrict AirDrop: Finder > AirDrop > Contacts Only"
     
@@ -175,7 +175,7 @@ check_application_hardening() {
     
     # App Store updates
     check_item "App Store Auto-Update" \
-        "defaults read com.apple.commerce AutoUpdate 2>/dev/null | grep -q '1'" \
+        "defaults read /Library/Preferences/com.apple.commerce AutoUpdate 2>/dev/null | grep -q 1 || defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallAppUpdates 2>/dev/null | grep -q 1" \
         "app" "medium" \
         "Enable auto-update: App Store > Preferences"
     
