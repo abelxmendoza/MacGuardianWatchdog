@@ -122,7 +122,7 @@ check_network_hardening() {
     
     # Stealth Mode
     check_item "Firewall Stealth Mode" \
-        "/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode | grep -q 'enabled'" \
+        "/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode | grep -qE 'enabled|is on'" \
         "network" "medium" \
         "Enable stealth mode: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on"
     
@@ -160,8 +160,8 @@ check_filesystem_hardening() {
         "Review and fix: find $HOME -type f -perm -002 -ls"
     
     # Time Machine
-    check_item "Time Machine Backup Active" \
-        "tmutil status 2>/dev/null | grep -q 'Running = 1'" \
+    check_item "Time Machine Backup Configured" \
+        "tmutil destinationinfo 2>/dev/null | grep -q '^Name'" \
         "file" "high" \
         "Enable Time Machine: System Settings > General > Time Machine"
     
@@ -231,6 +231,56 @@ check_security_tools() {
         "tool" "high" \
         "Install: brew install --cask lulu"
     
+    echo ""
+}
+
+# Posture-drift checks (gaps not covered above)
+check_posture_gaps() {
+    echo "${bold}🧭 Posture Drift & Exposure${normal}"
+    echo "----------------------------------------"
+
+    # Sealed system volume (Signed System Volume / authenticated root)
+    check_item "Authenticated Root (Sealed System Volume)" \
+        "csrutil authenticated-root status 2>/dev/null | grep -q 'enabled'" \
+        "system" "critical" \
+        "Re-enable from Recovery: csrutil authenticated-root enable"
+
+    # XProtect definitions refreshed within the last 45 days
+    check_item "XProtect Definitions Current (<45 days)" \
+        'f=/Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Resources/XProtect.meta.plist; [ -f "$f" ] && [ $(( $(date +%s) - $(stat -f %m "$f") )) -lt 3888000 ]' \
+        "system" "high" \
+        "Turn on 'Install Security Responses and system files': System Settings > General > Software Update > Automatic Updates"
+
+    # AirPlay Receiver listens on 5000/7000 on every network
+    check_item "AirPlay Receiver Disabled" \
+        "! lsof -nP -iTCP:7000 -sTCP:LISTEN 2>/dev/null | grep -q ControlCe" \
+        "network" "medium" \
+        "System Settings > General > AirDrop & Handoff > AirPlay Receiver: Off"
+
+    # Power Nap off in every power profile
+    check_item "Power Nap Disabled" \
+        "pmset -g custom | awk '/powernap/ && \$2==1 {f=1} END {exit f}'" \
+        "system" "low" \
+        "System Settings > Battery > Options > Enable Power Nap: Off"
+
+    # Wake for network access off in every power profile
+    check_item "Wake for Network Access Disabled" \
+        "pmset -g custom | awk '/womp/ && \$2==1 {f=1} END {exit f}'" \
+        "network" "low" \
+        "System Settings > Battery > Options > Wake for network access: Never"
+
+    # Show all filename extensions (defeats invoice.pdf.app tricks)
+    check_item "Show All Filename Extensions" \
+        "defaults read NSGlobalDomain AppleShowAllExtensions 2>/dev/null | grep -q 1" \
+        "user" "low" \
+        "Finder > Settings > Advanced > Show all filename extensions"
+
+    # Weekly Homebrew auto-update job loaded and its last run succeeded (within 8 days)
+    check_item "Homebrew Weekly Auto-Update Healthy" \
+        'l="$HOME/Library/Logs/brew-auto-update.log"; launchctl list com.abel.brew-auto-update >/dev/null 2>&1 && { [ ! -f "$l" ] || { [ -n "$(find "$l" -mtime -8)" ] && tail -r "$l" | grep -m1 "^exit:" | grep -q "exit: 0"; }; }' \
+        "application" "medium" \
+        "Check ~/Library/Logs/brew-auto-update.log; reload: launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.abel.brew-auto-update.plist"
+
     echo ""
 }
 
@@ -305,6 +355,7 @@ main() {
     check_application_hardening
     check_user_hardening
     check_security_tools
+    check_posture_gaps
     set -e  # Re-enable exit on error
     
     # Generate report
