@@ -147,6 +147,11 @@ run_unit_tests() {
         run_test_file "$SCRIPT_DIR/test_posture_toggles.sh"
     fi
 
+    # Background helper switches (launchd agents/daemons and login items)
+    if [ -f "$SCRIPT_DIR/test_startup_items.sh" ]; then
+        run_test_file "$SCRIPT_DIR/test_startup_items.sh"
+    fi
+
     # Startup item (LaunchAgent/Daemon, profile) monitoring and code signing
     if [ -f "$SCRIPT_DIR/test_persistence_watcher.sh" ]; then
         run_test_file "$SCRIPT_DIR/test_persistence_watcher.sh"

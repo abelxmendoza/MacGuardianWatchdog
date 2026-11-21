@@ -164,6 +164,10 @@ It only reports: nothing is deleted or changed. `--quick` skips the malware and 
 
 `macguardian posture` shows six common hardening controls and whether each is in its safe state: Remote Login (SSH), immediate screen lock, AirPlay Receiver, Power Nap, wake for network access, and showing all filename extensions. Switch one with `macguardian posture on|off <control>` (controls: `ssh`, `screenlock`, `airplay`, `powernap`, `netwake`, `extensions`), or set all of them safe with `macguardian posture harden`. It asks before each change, prompts for your password where macOS requires it, and `--dry-run` prints the commands without running them. `macguardian posture status --json` gives machine-readable output.
 
+### Startup helpers
+
+`macguardian startup` lists optional background helpers that launch with your Mac: Adobe Creative Cloud, the Microsoft Edge and Google updaters, Zoom, Oracle Java, XQuartz and the OpenVPN Connect login item, each marked on or off. Turn a group off with `macguardian startup off <group>` (or one item by its launchd label), back on with `startup on`, or all of them with `macguardian startup trim`. Items are disabled with `launchctl disable`, so the apps stay installed and keep working when you open them. System-wide daemons ask for your password. macOS items, security tools, MacGuardian, Homebrew, Docker, VPN and Tailscale entries are never switched. The list also flags leftover links whose app was uninstalled.
+
 `macguardian upgrade --batch` installs updates in one burst, so firewalls such as LuLu ask about Homebrew's `curl` once instead of once per package.
 
 ### Use it from Claude, Codex or Cursor
