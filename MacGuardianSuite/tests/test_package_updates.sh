@@ -30,7 +30,14 @@ case "$1" in
 esac
 exit 0
 EOF
-chmod +x "$BIN/brew" "$BIN/mas"
+cat > "$BIN/sudo" <<'EOF'
+#!/bin/bash
+# Stand in for cached sudo credentials so the result doesn't depend on the host
+# (package_updates.sh skips `mas upgrade` when sudo would need a password).
+[ "$1" = "-n" ] && shift
+exec "$@"
+EOF
+chmod +x "$BIN/brew" "$BIN/mas" "$BIN/sudo"
 
 failures=0
 expect_call() {
