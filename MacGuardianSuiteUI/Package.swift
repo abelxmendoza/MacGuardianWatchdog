@@ -10,7 +10,7 @@ let package = Package(
         .executable(name: "MacGuardianSuiteUI", targets: ["MacGuardianSuiteUI"])
     ],
     dependencies: [
-        .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0")
+        .package(url: "https://github.com/jpsim/Yams.git", from: "6.2.1")
     ],
     targets: [
         .executableTarget(
