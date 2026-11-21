@@ -20,11 +20,15 @@ MODE="${1:-}"
 [ "$#" -gt 0 ] && shift
 ASSUME_YES=false
 INSTALL_MAS=false
+# --batch upgrades everything in one brew call per kind. That downloads in one
+# burst, so outbound firewalls such as LuLu prompt once instead of per package.
+BATCH=false
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
         -y|--yes|--non-interactive) ASSUME_YES=true ;;
         --install-mas) INSTALL_MAS=true ;;
+        --batch|--fast) BATCH=true ;;
         -h|--help)
             MODE="help"
             ;;
@@ -48,6 +52,8 @@ Commands:
 Options:
   -y, --yes     Run Homebrew upgrades without confirmation
   --install-mas Offer to install the `mas` helper when App Store coverage is missing
+  --batch       Upgrade in one Homebrew call per kind (faster; one firewall prompt
+                for curl instead of one per package)
 EOF
 }
 
@@ -149,6 +155,15 @@ upgrade_items() {
         return 0
     fi
 
+    if [ "$BATCH" = true ]; then
+        local flags=("$kind")
+        [ "$kind" = "--cask" ] && flags+=(--greedy)
+        [ "$ASSUME_YES" = true ] && flags+=(--no-ask)
+        echo "Upgrading $(printf '%s\n' "$items" | grep -c .) item(s) in one batch."
+        run_step "Batch upgrade ($kind)" "$BREW_BIN" upgrade "${flags[@]}"
+        return 0
+    fi
+
     while IFS= read -r item; do
         [ -n "$item" ] || continue
         if [ "$kind" = "--cask" ]; then
@@ -174,7 +189,14 @@ upgrade_everything() {
     echo "== Upgrading every Homebrew-managed app =="
     upgrade_items --cask --greedy
 
-    if ensure_mas; then
+    if ensure_mas && [ ! -t 0 ] && ! sudo -n true 2>/dev/null; then
+        # mas 7+ installs through sudo, which can't prompt without a terminal.
+        echo ""
+        echo "== Mac App Store apps =="
+        "$(command -v mas)" outdated 2>/dev/null | sed 's/^/  /'
+        echo "App Store upgrades need your password: run 'sudo mas upgrade' in Terminal"
+        echo "or click Update in the App Store app."
+    elif ensure_mas; then
         run_step "Upgrading all Mac App Store apps" "$(command -v mas)" upgrade
     else
         echo ""

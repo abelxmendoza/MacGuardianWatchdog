@@ -279,7 +279,7 @@ class TerminalLauncher {
             return
         }
 
-        let operation = upgrade ? "upgrade --yes" : "update"
+        let operation = upgrade ? "upgrade --yes --batch" : "update"
         let heading = upgrade ? "Upgrade Everything" : "Check for Updates"
         let command = """
         clear

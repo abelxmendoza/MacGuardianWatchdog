@@ -19,9 +19,15 @@ UPDATE_SCRIPT="$PROJECT_ROOT/MacGuardianSuite/package_updates.sh"
 
 usage() {
     cat <<'EOF'
-MacGuardian software maintenance
+MacGuardian
 
 Usage:
+  macguardian checkup [--quick|--full]  One-button health + security checkup
+  macguardian tailscale          Diagnose Tailscale problems
+  macguardian browsers           Find risky Chrome/Firefox extensions
+  macguardian report             Show the last checkup report
+  macguardian mcp                Run the MCP server (for Claude, Codex, Cursor)
+  macguardian setup-agents       Register the MCP server and skill with your AI tools
   macguardian update             Refresh catalogs and list available updates
   macguardian upgrade [OPTIONS]  Upgrade Homebrew tools/apps and App Store apps
   macguardian all [OPTIONS]      Refresh catalogs, then upgrade everything
@@ -30,6 +36,7 @@ Usage:
 
 Upgrade options:
   -y, --yes                      Run Homebrew upgrades without confirmation
+  --batch                        One download burst (one firewall prompt, faster)
 
 Apps installed directly from vendor websites still use their own updater.
 EOF
@@ -38,7 +45,27 @@ EOF
 COMMAND="${1:-help}"
 [ "$#" -gt 0 ] && shift
 
+SUITE="$PROJECT_ROOT/MacGuardianSuite"
 case "$COMMAND" in
+    checkup|check|scan)
+        exec /bin/bash "$SUITE/checkup.sh" "$@"
+        ;;
+    tailscale|ts)
+        exec /bin/bash "$SUITE/tailscale_doctor.sh" "$@"
+        ;;
+    browsers|extensions)
+        exec /usr/bin/env python3 -I "$SUITE/browser_audit.py" "$@"
+        ;;
+    report)
+        if [ -f "$HOME/.macguardian/checkup/latest.txt" ]; then cat "$HOME/.macguardian/checkup/latest.txt"
+        else echo "No checkup has run yet. Run: macguardian checkup"; fi
+        ;;
+    mcp)
+        exec /usr/bin/env python3 "$SUITE/mcp_server.py"
+        ;;
+    setup-agents)
+        exec /bin/bash "$SUITE/install_agent_tools.sh" "$@"
+        ;;
     update)
         exec /bin/bash "$UPDATE_SCRIPT" update "$@"
         ;;

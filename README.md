@@ -144,6 +144,36 @@ Not shown in the app: its anomaly scores are still noisy.
 
 ---
 
+## One-Click Checkup
+
+The Dashboard's **One-Click Checkup** card (or `macguardian checkup` in Terminal) runs the whole "is my Mac OK?" pass and gives one plain-language line per step:
+
+| Step | What it checks |
+| --- | --- |
+| Tailscale | Logged in and running, a Homebrew `tailscaled` fighting the Tailscale app, duplicate machines, relay-only connections |
+| Security settings | FileVault, SIP, Gatekeeper, firewall, automatic security updates, Remote Login |
+| Self-check | MacGuardian's own scripts, app signature and background jobs |
+| Threat hunt | Suspicious processes, network connections and files |
+| Malware | ClamAV scan of the last 14 days of Downloads and the startup folders (`--full` scans all of Downloads); virus definitions refresh automatically |
+| Browser extensions | Chrome, Brave, Edge, Arc and Firefox: known-bad, impostor and free-VPN extensions, plus hijacking policies |
+| Software updates | Outdated Homebrew tools and apps, App Store apps and macOS |
+
+It only reports: nothing is deleted or changed. `--quick` skips the malware and threat scans (about a minute). Results are saved to `~/.macguardian/checkup/latest.json`, and `macguardian report` shows the last one. Other one-off commands: `macguardian tailscale` and `macguardian browsers`.
+
+`macguardian upgrade --batch` installs updates in one burst, so firewalls such as LuLu ask about Homebrew's `curl` once instead of once per package.
+
+### Use it from Claude, Codex or Cursor
+
+MacGuardian includes an MCP server (`MacGuardianSuite/mcp_server.py`, standard library only) and a Claude skill (`agent/skills/macguardian`). To register both:
+
+```bash
+macguardian setup-agents
+```
+
+This registers the MCP server with Claude Code (for all projects), links the skill, and adds the server to Codex and Cursor when their config files exist (backing them up first). `macguardian setup-agents --print` shows the config for other clients, and `--remove` undoes it. Then ask your assistant to "run a MacGuardian checkup". Tools: `run_checkup`, `get_checkup_report`, `tailscale_doctor`, `audit_browser_extensions`, `check_software_updates`, `run_software_updates`, `self_check`, `get_job`, `cancel_job`, `open_app`.
+
+---
+
 ## CLI Usage Reference
 
 ```bash

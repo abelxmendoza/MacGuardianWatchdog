@@ -23,6 +23,9 @@ struct DashboardView: View {
                 }
                 .padding(.horizontal)
 
+                // One button for the whole "is my Mac OK?" pass
+                CheckupCard()
+
                 // MacGuardian's check on itself
                 SelfCheckCard()
 

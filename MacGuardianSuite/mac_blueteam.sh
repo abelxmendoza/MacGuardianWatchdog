@@ -371,6 +371,7 @@ detect_filesystem_anomalies() {
             -not -path "*/.cursor/*" \
             -not -path "*/.vscode/*" \
             -not -path "*/.expo/*" \
+            -not -path "$HOME/.net/*" \
             2>/dev/null | head -5 || true)
         if [ -n "$suspicious" ]; then
             warning "Files with suspicious extension ($ext) in unexpected locations:"
@@ -954,7 +955,8 @@ main() {
     fi
     
     # Send action-based email with AI summary
-    if [ -f "$SCRIPT_DIR/action_email_notifier.sh" ] && [ -n "${REPORT_EMAIL:-${ALERT_EMAIL:-}}" ]; then
+    # MG_NO_EMAIL=1 (set by checkup.sh and the MCP server) keeps automated runs quiet.
+    if [ "${MG_NO_EMAIL:-0}" != "1" ] && [ -f "$SCRIPT_DIR/action_email_notifier.sh" ] && [ -n "${REPORT_EMAIL:-${ALERT_EMAIL:-}}" ]; then
         source "$SCRIPT_DIR/action_email_notifier.sh" 2>/dev/null || true
         
         local event_data
