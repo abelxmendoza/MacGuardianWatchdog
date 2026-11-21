@@ -25,6 +25,8 @@ Usage:
   macguardian checkup [--quick|--full]  One-button health + security checkup
   macguardian tailscale          Diagnose Tailscale problems
   macguardian browsers           Find risky Chrome/Firefox extensions
+  macguardian posture [status]   Show hardening toggles (SSH, screen lock, AirPlay, ...)
+  macguardian posture on|off X   Switch one control; "posture harden" sets all safe
   macguardian report             Show the last checkup report
   macguardian mcp                Run the MCP server (for Claude, Codex, Cursor)
   macguardian setup-agents       Register the MCP server and skill with your AI tools
@@ -55,6 +57,9 @@ case "$COMMAND" in
         ;;
     browsers|extensions)
         exec /usr/bin/env python3 -I "$SUITE/browser_audit.py" "$@"
+        ;;
+    posture|toggle|toggles)
+        exec /bin/bash "$SUITE/posture_toggles.sh" "$@"
         ;;
     report)
         if [ -f "$HOME/.macguardian/checkup/latest.txt" ]; then cat "$HOME/.macguardian/checkup/latest.txt"

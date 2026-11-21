@@ -142,6 +142,11 @@ run_unit_tests() {
         run_test_file "$SCRIPT_DIR/test_package_updates.sh"
     fi
 
+    # Hardening toggles (SSH, screen lock, AirPlay, Power Nap, network wake, extensions)
+    if [ -f "$SCRIPT_DIR/test_posture_toggles.sh" ]; then
+        run_test_file "$SCRIPT_DIR/test_posture_toggles.sh"
+    fi
+
     # Startup item (LaunchAgent/Daemon, profile) monitoring and code signing
     if [ -f "$SCRIPT_DIR/test_persistence_watcher.sh" ]; then
         run_test_file "$SCRIPT_DIR/test_persistence_watcher.sh"

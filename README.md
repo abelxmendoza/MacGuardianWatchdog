@@ -160,6 +160,10 @@ The Dashboard's **One-Click Checkup** card (or `macguardian checkup` in Terminal
 
 It only reports: nothing is deleted or changed. `--quick` skips the malware and threat scans (about a minute). Results are saved to `~/.macguardian/checkup/latest.json`, and `macguardian report` shows the last one. Other one-off commands: `macguardian tailscale` and `macguardian browsers`.
 
+### Hardening toggles
+
+`macguardian posture` shows six common hardening controls and whether each is in its safe state: Remote Login (SSH), immediate screen lock, AirPlay Receiver, Power Nap, wake for network access, and showing all filename extensions. Switch one with `macguardian posture on|off <control>` (controls: `ssh`, `screenlock`, `airplay`, `powernap`, `netwake`, `extensions`), or set all of them safe with `macguardian posture harden`. It asks before each change, prompts for your password where macOS requires it, and `--dry-run` prints the commands without running them. `macguardian posture status --json` gives machine-readable output.
+
 `macguardian upgrade --batch` installs updates in one burst, so firewalls such as LuLu ask about Homebrew's `curl` once instead of once per package.
 
 ### Use it from Claude, Codex or Cursor
