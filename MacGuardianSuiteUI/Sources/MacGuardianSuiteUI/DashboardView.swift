@@ -26,6 +26,9 @@ struct DashboardView: View {
                 // One button for the whole "is my Mac OK?" pass
                 CheckupCard()
 
+                // Switch hardening controls (SSH, screen lock, AirPlay, ...)
+                PostureTogglesCard()
+
                 // MacGuardian's check on itself
                 SelfCheckCard()
 
